@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2020-05-06 17:35:37.369.cpp,C:\Users\Tiger\Documents\Projets Borland Studio\Unit1.cpp=C:\Users\Tiger\Documents\Projets Borland Studio\Taipei.cpp</Transaction>
+    <Transaction>2020-05-06 17:35:37.369.h,C:\Users\Tiger\Documents\Projets Borland Studio\Unit1.h=C:\Users\Tiger\Documents\Projets Borland Studio\Taipei.h</Transaction>
+    <Transaction>2020-05-06 17:35:37.369.dfm,C:\Users\Tiger\Documents\Projets Borland Studio\Unit1.dfm=C:\Users\Tiger\Documents\Projets Borland Studio\Taipei.dfm</Transaction>
+    <Transaction>2020-05-06 17:36:00.422.bdsproj,C:\Users\Tiger\Documents\Projets Borland Studio\Project1.bdsproj=C:\Users\Tiger\Documents\Projets Borland Studio\ProjectTaipei.bdsproj</Transaction>
+    <Transaction>2020-05-06 17:57:18.496.cpp,C:\Users\Tiger\Documents\Projets Borland Studio\Taipei.cpp=E:\Autres\Programmation\Taipei\Taipei.cpp</Transaction>
+    <Transaction>2020-05-06 17:57:18.496.h,C:\Users\Tiger\Documents\Projets Borland Studio\Taipei.h=E:\Autres\Programmation\Taipei\Taipei.h</Transaction>
+    <Transaction>2020-05-06 17:57:18.496.dfm,C:\Users\Tiger\Documents\Projets Borland Studio\Taipei.dfm=E:\Autres\Programmation\Taipei\Taipei.dfm</Transaction>
+    <Transaction>2020-05-06 17:57:37.706.bdsproj,C:\Users\Tiger\Documents\Projets Borland Studio\ProjectTaipei.bdsproj=E:\Autres\Programmation\Taipei\ProjectTaipei.bdsproj</Transaction>
+    <Transaction>2020-05-06 17:59:30.782.cpp,E:\Autres\Programmation\Taipei\Taipei.cpp=E:\Autres\Programmation\Taipei\MainTaipei.cpp</Transaction>
+    <Transaction>2020-05-06 17:59:30.782.h,E:\Autres\Programmation\Taipei\Taipei.h=E:\Autres\Programmation\Taipei\MainTaipei.h</Transaction>
+    <Transaction>2020-05-06 17:59:30.782.dfm,E:\Autres\Programmation\Taipei\Taipei.dfm=E:\Autres\Programmation\Taipei\MainTaipei.dfm</Transaction>
+    <Transaction>2020-05-06 17:59:38.887.bdsproj,E:\Autres\Programmation\Taipei\ProjectTaipei.bdsproj=E:\Autres\Programmation\Taipei\Taipei.bdsproj</Transaction>
+    <Transaction>2020-05-08 18:34:43.291.cpp,E:\Autres\Programmation\Taipei\Unit1.cpp=E:\Autres\Programmation\Taipei\SelGame.cpp</Transaction>
+    <Transaction>2020-05-08 18:34:43.291.h,E:\Autres\Programmation\Taipei\Unit1.h=E:\Autres\Programmation\Taipei\SelGame.h</Transaction>
+    <Transaction>2020-05-08 18:34:43.291.dfm,E:\Autres\Programmation\Taipei\Unit1.dfm=E:\Autres\Programmation\Taipei\SelGame.dfm</Transaction>
+  </Transactions>
+</BorlandProject>
