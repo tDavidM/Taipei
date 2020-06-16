@@ -11,13 +11,13 @@
 #pragma resource "*.dfm"
 TfTaipei *fTaipei;
 
-#define TileSize       36
-#define HalfTileSize   18
-#define TileXOffset    5
-#define TileYOffset    3
-#define MaxNumberLayer 7
-#define GameHeight     17
-#define GameWidth      31
+#define TILESIZE       36
+#define HALFTILESIZE   18
+#define TILEXOFFSET    5
+#define TILEYOFFSET    3
+#define MAXNUMBERLAYER 7
+#define GAMEHEIGHT     17
+#define GAMEWIDTH      31
 
 //---------------------------------------------------------------------------
 
@@ -67,7 +67,6 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
          Beep();
          this->DebugDraw = true;
          this->Mode = 0;
-         //this->DebugCmp = 0;
          lDebug->Visible = true;
       }
   }
@@ -93,6 +92,9 @@ void __fastcall TfTaipei::mStartOverClick(TObject *Sender)
    TTile* CurrentTile;
 
    if (this->StepBack > 0) {
+      this->tAutoPlay->Enabled = false;
+      this->mAutoPlay->Checked = false;
+      
       CurrentTile = this->TileList;
       while(CurrentTile != NULL) {
          if (CurrentTile->Step >= 0) {
@@ -114,6 +116,9 @@ void __fastcall TfTaipei::mBackupClick(TObject *Sender)
    TTile* CurrentTile;
 
    if (this->StepBack > 0) {
+      this->tAutoPlay->Enabled = false;
+      this->mAutoPlay->Checked = false;
+
       this->StepBack--;
       CurrentTile = this->TileList;
       while(CurrentTile != NULL) {
@@ -174,6 +179,8 @@ void __fastcall TfTaipei::mNewClick(TObject *Sender)
 {
    int GameNo;
 
+   this->tAutoPlay->Enabled = false;
+   this->mAutoPlay->Checked = false;
    this->iMainLogo->Visible = false;
    this->lMainTitleShadow->Visible = false;
    this->lMainTitle->Visible = false;
@@ -184,10 +191,10 @@ void __fastcall TfTaipei::mNewClick(TObject *Sender)
 
    Randomize();
    GameNo = Random(32767);
-   fTaipei->Caption = "Taipei Game  #" + IntToStr(GameNo);
+   this->Caption = "Taipei Game  #" + IntToStr(GameNo);
 
    this->BuildStructure(this->Mode);
-   this->FillStructure(GameNo, this->Mode);
+   this->FillStructure(GameNo);
    this->Repaint();
 }
 //---------------------------------------------------------------------------
@@ -210,6 +217,8 @@ void __fastcall TfTaipei::mSelectClick(TObject *Sender)
       if (GameNo < 0)
          GameNo = (65536 + GameNo);
       
+      this->tAutoPlay->Enabled = false;
+      this->mAutoPlay->Checked = false;
       this->iMainLogo->Visible = false;
       this->lMainTitleShadow->Visible = false;
       this->lMainTitle->Visible = false;
@@ -221,7 +230,7 @@ void __fastcall TfTaipei::mSelectClick(TObject *Sender)
       this->Caption = "Taipei Game  #" + IntToStr(GameNo);
 
       this->BuildStructure(this->Mode);
-      this->FillStructure(GameNo, this->Mode);
+      this->FillStructure(GameNo);
       this->Repaint();
    }
    delete fSelectGame;
@@ -236,6 +245,9 @@ void __fastcall TfTaipei::mHintClick(TObject *Sender)
    bool GiveUp = false;
    bool TryNext = false;
    int LoopCmp = 144;
+
+   this->tAutoPlay->Enabled = false;
+   this->mAutoPlay->Checked = false;
 
    //Cancel any selection
    if (this->SelectedTile != NULL) {
@@ -269,7 +281,7 @@ void __fastcall TfTaipei::mHintClick(TObject *Sender)
       //Find the next available tile
       CurrentTile = StartingTile;
       while(CurrentTile != NULL) {
-         if (CurrentTile->Visible && IsTileFree(CurrentTile)) {
+         if (CurrentTile->Visible && this->IsTileFree(CurrentTile)) {
             this->HintLoop = CurrentTile->Id;
             this->SelectedTile = CurrentTile;
             CurrentTile = NULL;
@@ -283,7 +295,8 @@ void __fastcall TfTaipei::mHintClick(TObject *Sender)
          //Select the matching available tile of the same type
          CurrentTile = this->SelectedTile->Next;
          while(CurrentTile != NULL) {
-            if (CurrentTile->Visible && CurrentTile->Type == this->SelectedTile->Type && IsTileFree(CurrentTile)) {
+            if (CurrentTile->Visible && CurrentTile->Type == this->SelectedTile->Type &&
+                 this->IsTileFree(CurrentTile)) {
                SelectTile = CurrentTile;
                SelectTile->Selected = true;
                CurrentTile = NULL;
@@ -334,7 +347,6 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
    TTile* CurrentTile = this->TileList;
    TTile* SelectTile = NULL;
    int MinHint = 72;
-   //int NextMinHint = 72;
 
    if (this->SelectedTile != NULL) {
       this->SelectedTile->Selected = false;
@@ -343,7 +355,7 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
 
    //Find the lowest Hint value from all free and visible tiles and select it
    while(CurrentTile != NULL) {
-      if (CurrentTile->Visible && CurrentTile->Hint < MinHint && IsTileFree(CurrentTile)) {
+      if (CurrentTile->Visible && CurrentTile->Hint < MinHint && this->IsTileFree(CurrentTile)) {
          MinHint = CurrentTile->Hint;
          this->SelectedTile = CurrentTile;
       }
@@ -354,7 +366,7 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
    else {
       //Rare Case
       while(CurrentTile != NULL) {
-         if (CurrentTile->Visible && CurrentTile->Hint == MinHint && IsTileFree(CurrentTile)) {
+         if (CurrentTile->Visible && CurrentTile->Hint == MinHint && this->IsTileFree(CurrentTile)) {
             MinHint = CurrentTile->Hint;
             this->SelectedTile = CurrentTile;
             this->SelectedTile->Selected = true;
@@ -368,7 +380,7 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
    CurrentTile = this->TileList;
    while(CurrentTile != NULL) {
       if (CurrentTile->Visible && CurrentTile->Hint == MinHint &&
-          CurrentTile->Id != this->SelectedTile->Id && IsTileFree(CurrentTile)) {
+           CurrentTile->Id != this->SelectedTile->Id && this->IsTileFree(CurrentTile)) {
         CurrentTile->Selected = true;
         SelectTile = CurrentTile;
       }
@@ -379,9 +391,8 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
    if (SelectTile == NULL) {
       CurrentTile = this->TileList;
       while(CurrentTile != NULL) {
-         if (CurrentTile->Visible && CurrentTile->Hint != MinHint && CurrentTile->Type == this->SelectedTile->Type &&
-             /*CurrentTile->Hint < NextMinHint &&*/ IsTileFree(CurrentTile)) {
-            //NextMinHint = CurrentTile->Hint;
+         if (CurrentTile->Visible && CurrentTile->Hint != MinHint &&
+              CurrentTile->Type == this->SelectedTile->Type && this->IsTileFree(CurrentTile)) {
             SelectTile = CurrentTile;
             SelectTile->Selected = true;
          }
@@ -392,7 +403,7 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
    if (SelectTile != NULL) {
       this->Repaint();
       Sleep(100);
-      HideTileStep(SelectTile, true);
+      this->HideTileStep(SelectTile, true);
    } else {
       if (this->SelectedTile != NULL) {
          this->SelectedTile->Selected = false;
@@ -416,7 +427,7 @@ void __fastcall TfTaipei::FormMouseMove(TObject *Sender, TShiftState Shift,
 
    CurrentTile = this->GetTile(Pos);
    if (CurrentTile != NULL) {
-      lDebug->Caption = IntToStr(CurrentTile->Id) + ":" + IntToStr(CurrentTile->Hint);
+      this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":" + IntToStr(CurrentTile->Hint);
       if (CurrentTile->Visible && this->IsTileFree(CurrentTile))
          Screen->Cursor = crCross;
       else
@@ -429,7 +440,6 @@ void __fastcall TfTaipei::FormMouseMove(TObject *Sender, TShiftState Shift,
 void __fastcall TfTaipei::FormPaint(TObject *Sender)
 {
    this->DrawAllTiles();
-   //this->DebugCmp++;
 }
 //---------------------------------------------------------------------------
 
@@ -444,6 +454,9 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
 
    CurrentTile = this->GetTile(Pos);
    if (CurrentTile != NULL ) {
+      this->tAutoPlay->Enabled = false;
+      this->mAutoPlay->Checked = false;
+      
       if (CurrentTile->Visible) {
          if (!this->IsTileFree(CurrentTile)) {
             if (this->mMessages->Checked)
@@ -463,7 +476,7 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
                } else {
                   //Match tile with selection
                   if (CurrentTile->Type == this->SelectedTile->Type){
-                     HideTileStep(CurrentTile, false);
+                     this->HideTileStep(CurrentTile, false);
                   } else {
                      CurrentTile->Selected = true;
                      this->Repaint();
@@ -481,7 +494,7 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
 }
 //---------------------------------------------------------------------------
 
-void TfTaipei::HideTileStep(TTile* pTile, bool AutoPlay)
+void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
 {
    TTile* CurrentTile;
    TTile* LookupTile;
@@ -508,12 +521,12 @@ void TfTaipei::HideTileStep(TTile* pTile, bool AutoPlay)
          Found = true;
       CurrentTile = CurrentTile->Next;
    }
-   if (!Found && !AutoPlay) {
+   if (!Found && !pAutoPlay) {
       if (this->GamedDone <= 0) {
          this->tAutoPlay->Enabled = false;
          this->mAutoPlay->Checked = false;
-         MsgNo = Random(MsgCount);
-         Application->MessageBox(Congrat[MsgNo].c_str(), "Winner'qus Fortune" , MB_OK | MB_ICONEXCLAMATION);
+         MsgNo = Random(CONGRATSIZE-1);
+         Application->MessageBox(gCongrat[MsgNo].c_str(), "Winner'qus Fortune" , MB_OK | MB_ICONEXCLAMATION);
       }
       this->GamedDone = 32; // :-) if you back enough moves, you get a winning message
    } else {
@@ -521,10 +534,10 @@ void TfTaipei::HideTileStep(TTile* pTile, bool AutoPlay)
       Found = false;
       CurrentTile = this->TileList;
       while(CurrentTile != NULL && !Found) {
-         if(CurrentTile->Visible && IsTileFree(CurrentTile)) {
+         if(CurrentTile->Visible && this->IsTileFree(CurrentTile)) {
             LookupTile = CurrentTile->Next;
             while(LookupTile != NULL) {
-               if (LookupTile->Visible && IsTileFree(LookupTile) && LookupTile->Type == CurrentTile->Type) {
+               if (LookupTile->Visible && this->IsTileFree(LookupTile) && LookupTile->Type == CurrentTile->Type) {
                   Found = true;
                   LookupTile = NULL;
                } else
@@ -535,7 +548,7 @@ void TfTaipei::HideTileStep(TTile* pTile, bool AutoPlay)
       }
 
       if (!Found) {
-         if (!AutoPlay)
+         if (!pAutoPlay)
             Application->MessageBox("No free tiles", "Taipei" , MB_OK | MB_ICONSTOP);
          else {
             this->tAutoPlay->Enabled = false;
@@ -547,90 +560,88 @@ void TfTaipei::HideTileStep(TTile* pTile, bool AutoPlay)
 }
 //---------------------------------------------------------------------------
 
-Byte __fastcall TfTaipei::CustomIntToByte(int i)
+Byte __fastcall TfTaipei::CustomIntToByte(int pByte)
 {
-   if(i > 255) return 255;
-   else if(i < 0) return 0;
-   else return i;
+   if(pByte > 255) return 255;
+   else if(pByte < 0) return 0;
+   else return pByte;
 }
 //---------------------------------------------------------------------------
 
-void __fastcall TfTaipei::Invert(Graphics::TBitmap *Bitmap)
+void __fastcall TfTaipei::Invert(Graphics::TBitmap *pBitmap)
 {
    Byte *pyx;
    int r, g, b;
 
-   Bitmap->HandleType=bmDIB;    // allows use of ScanLine
-   Bitmap->PixelFormat=pf32bit; // 32bit the same as int so we can use int* for pixels pointer
+   pBitmap->HandleType=bmDIB;    // allows use of ScanLine
+   pBitmap->PixelFormat=pf32bit; // 32bit the same as int so we can use int* for pixels pointer
 
-   for(int y=0; y<Bitmap->Height-1; y++) {
-      pyx=(Byte *)Bitmap->ScanLine[y];
-      for(int x=0; x<Bitmap->Width+9; x++) {
-         pyx[x*3]     = CustomIntToByte(255 -pyx[x*3]);
-         pyx[x*3 + 1] = CustomIntToByte(255 -pyx[x*3 + 1]);
-         pyx[x*3 + 2] = CustomIntToByte(255 -pyx[x*3 + 2]);
+   for(int y=0; y<pBitmap->Height-1; y++) {
+      pyx=(Byte *)pBitmap->ScanLine[y];
+      for(int x=0; x<pBitmap->Width+9; x++) {
+         pyx[x*3]     = this->CustomIntToByte(255 -pyx[x*3]);
+         pyx[x*3 + 1] = this->CustomIntToByte(255 -pyx[x*3 + 1]);
+         pyx[x*3 + 2] = this->CustomIntToByte(255 -pyx[x*3 + 2]);
       }
    }
 }
 //---------------------------------------------------------------------------
 
-void TfTaipei::DrawTile(int Id, bool Sel, int x, int y, int z, bool Notch, int Debug)
+void TfTaipei::DrawTile(int pId, bool pSel, int pX, int pY, int pZ, bool pNotch, int pDebug)
 {
-   int RealX = (x * HalfTileSize) + 8; // 8 = Global Top Offset
-   int RealY = (y * HalfTileSize) + 6; // 6 = Global Left Offset
+   int RealX = (pX * HALFTILESIZE) + 8; // 8 = Global Top Offset
+   int RealY = (pY * HALFTILESIZE) + 6; // 6 = Global Left Offset
    TPoint LeftSide[4];
    TPoint LowerSide[4];
    Graphics::TBitmap * TileGraph = new Graphics::TBitmap;
 
-   RealX = RealX + (z * TileXOffset);
-   RealY = RealY - (z * TileYOffset);
+   RealX = RealX + (pZ * TILEXOFFSET);
+   RealY = RealY - (pZ * TILEYOFFSET);
 
    this->Canvas->Pen->Color = clBlack;
-   if (Debug == 1) //Debug color mode
-      this->Canvas->Brush->Color = clBlack;
-   if (Debug == 2) //Debug color mode
-      this->Canvas->Brush->Color = clRed;
-   if (Debug == 3) //Debug color mode
-      this->Canvas->Brush->Color = clYellow;
-   if (Debug == 4) //Debug color mode
-      this->Canvas->Brush->Color = clBlue;
-      
-   if (Debug == 0)
-      this->Canvas->Brush->Color = clGray;
+
+   switch(pDebug) { 
+      case 0 : this->Canvas->Brush->Color = clGray; //Normal Mode
+         break;     
+      case 1 : this->Canvas->Brush->Color = clBlue; //Debug color mode
+         break;     
+      case 2 : this->Canvas->Brush->Color = clBlack;
+         break;
+   }
 
    LeftSide[0] = Point(RealX, RealY); //Upper Left Corner (Top)
-   LeftSide[1] = Point(RealX , RealY + TileSize - 1); //Lower Left Corner (Top)
-   LeftSide[2] = Point(RealX - TileXOffset, RealY + TileYOffset + TileSize); //Lower Left Corner (Bottom)
-   LeftSide[3] = Point(RealX - TileXOffset, RealY + TileYOffset); //Upper Left Corner (Bottom)
+   LeftSide[1] = Point(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
+   LeftSide[2] = Point(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
+   LeftSide[3] = Point(RealX - TILEXOFFSET, RealY + TILEYOFFSET); //Upper Left Corner (Bottom)
    this->Canvas->Polygon(LeftSide, 3);
 
-   if (Notch) {
-      LowerSide[0] = Point(RealX , RealY + TileSize - 1); //Lower Left Corner (Top)
-      LowerSide[1] = Point(RealX + HalfTileSize - 1, RealY + TileSize - 1); //Lower Right Corner (Top)
-      LowerSide[2] = Point(RealX - TileXOffset + HalfTileSize - 1, RealY + TileYOffset + TileSize); //Lower Right Corner (Bottom)
-      LowerSide[3] = Point(RealX - TileXOffset, RealY + TileYOffset + TileSize); //Lower Left Corner (Bottom)
+   if (pNotch) {
+   LowerSide[0] = Point(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
+      LowerSide[1] = Point(RealX + HALFTILESIZE - 1, RealY + TILESIZE - 1); //Lower Right Corner (Top)
+      LowerSide[2] = Point(RealX - TILEXOFFSET + HALFTILESIZE - 1, RealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
+      LowerSide[3] = Point(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
       this->Canvas->Polygon(LowerSide, 3);
    } else {
-      LowerSide[0] = Point(RealX , RealY + TileSize - 1); //Lower Left Corner (Top)
-      LowerSide[1] = Point(RealX + TileSize - 1, RealY + TileSize - 1); //Lower Right Corner (Top)
-      LowerSide[2] = Point(RealX - TileXOffset + TileSize - 1, RealY + TileYOffset + TileSize); //Lower Right Corner (Bottom)
-      LowerSide[3] = Point(RealX - TileXOffset, RealY + TileYOffset + TileSize); //Lower Left Corner (Bottom)
+      LowerSide[0] = Point(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
+      LowerSide[1] = Point(RealX + TILESIZE - 1, RealY + TILESIZE - 1); //Lower Right Corner (Top)
+      LowerSide[2] = Point(RealX - TILEXOFFSET + TILESIZE - 1, RealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
+      LowerSide[3] = Point(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
       this->Canvas->Polygon(LowerSide, 3);
    }
 
-   if (Debug > 0) { //Debug color mode
-      this->Canvas->Rectangle(RealX, RealY, RealX + TileSize, RealY + TileSize); //Top Face
+   if (pDebug > 0) { //Debug color mode
+      this->Canvas->Rectangle(RealX, RealY, RealX + TILESIZE, RealY + TILESIZE); //Top Face
    } else {
       this->Canvas->Brush->Color = clWhite;
-      this->Canvas->Rectangle(RealX, RealY, RealX + TileSize, RealY + TileSize); //Top Face
+      this->Canvas->Rectangle(RealX, RealY, RealX + TILESIZE, RealY + TILESIZE); //Top Face
 
-         this->mlTiles->GetBitmap(Id, TileGraph);
-         if(Sel)
-            this->Invert(TileGraph);
+      this->mlTiles->GetBitmap(pId, TileGraph);
+      if(pSel)
+         this->Invert(TileGraph);
 
-         this->Canvas->Draw(RealX, RealY, TileGraph);
+      this->Canvas->Draw(RealX, RealY, TileGraph);
 
-         delete TileGraph;
+      delete TileGraph;
    }
 }
 //---------------------------------------------------------------------------
@@ -648,7 +659,6 @@ void TfTaipei::DrawAllTiles(void)
 
    while(CurrentTile != NULL) {
       if (CurrentTile->Visible || CurrentTile->Debug) {
-         //NotchTile = this->GetTile(CurrentTile->X - 2, CurrentTile->Y - 1, CurrentTile->Z, true, true);
          NotchTile = this->GetTile(CurrentTile->X + 1, CurrentTile->Y + 2, CurrentTile->Z, true, true);
          if (NotchTile != NULL)
             IndNotch = NotchTile->Visible;
@@ -660,25 +670,25 @@ void TfTaipei::DrawAllTiles(void)
       } else {
          //Debug WireFrame Mode
          if (this->DebugDraw) {
-            int RealX = (CurrentTile->X * HalfTileSize) + 8 + (CurrentTile->Z * TileXOffset); // 8 = Global Top Offset
-            int RealY = (CurrentTile->Y * HalfTileSize) + 6 - (CurrentTile->Z * TileYOffset); // 6 = Global Left Offset
+            int RealX = (CurrentTile->X * HALFTILESIZE) + 8 + (CurrentTile->Z * TILEXOFFSET); // 8 = Global Top Offset
+            int RealY = (CurrentTile->Y * HALFTILESIZE) + 6 - (CurrentTile->Z * TILEYOFFSET); // 6 = Global Left Offset
             //Left Side
             this->Canvas->MoveTo(RealX, RealY); //Upper Left Corner (Top)
-            this->Canvas->LineTo(RealX , RealY + TileSize - 1); //Lower Left Corner (Top)
-            this->Canvas->LineTo(RealX - TileXOffset, RealY + TileYOffset + TileSize); //Lower Left Corner (Bottom)
-            this->Canvas->LineTo(RealX - TileXOffset, RealY + TileYOffset); //Upper Left Corner (Bottom)
+            this->Canvas->LineTo(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
+            this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
+            this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET); //Upper Left Corner (Bottom)
             this->Canvas->LineTo(RealX, RealY); //Upper Left Corner (Top)
             //LowerSide
-            this->Canvas->MoveTo(RealX , RealY + TileSize - 1); //Lower Left Corner (Top)
-            this->Canvas->LineTo(RealX + TileSize - 1, RealY + TileSize - 1); //Lower Right Corner (Top)
-            this->Canvas->LineTo(RealX - TileXOffset + TileSize - 1, RealY + TileYOffset + TileSize); //Lower Right Corner (Bottom)
-            this->Canvas->LineTo(RealX - TileXOffset, RealY + TileYOffset + TileSize); //Lower Left Corner (Bottom)
-            this->Canvas->LineTo(RealX , RealY + TileSize - 1); //Lower Left Corner (Top)
+            this->Canvas->MoveTo(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
+            this->Canvas->LineTo(RealX + TILESIZE - 1, RealY + TILESIZE - 1); //Lower Right Corner (Top)
+            this->Canvas->LineTo(RealX - TILEXOFFSET + TILESIZE - 1, RealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
+            this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
+            this->Canvas->LineTo(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
             //Top
             this->Canvas->MoveTo(RealX, RealY);
-            this->Canvas->LineTo(RealX + TileSize, RealY);
-            this->Canvas->LineTo(RealX + TileSize, RealY + TileSize);
-            this->Canvas->LineTo(RealX, RealY + TileSize);
+            this->Canvas->LineTo(RealX + TILESIZE, RealY);
+            this->Canvas->LineTo(RealX + TILESIZE, RealY + TILESIZE);
+            this->Canvas->LineTo(RealX, RealY + TILESIZE);
             this->Canvas->LineTo(RealX, RealY);
          }
       }
@@ -688,40 +698,40 @@ void TfTaipei::DrawAllTiles(void)
 }
 //---------------------------------------------------------------------------
 
-TTile* TfTaipei::GetTile(int x, int y, int z, bool ExactPos, bool ExactZ)
+TTile* TfTaipei::GetTile(int pX, int pY, int pZ, bool pExactPos, bool pExactZ)
 {
    bool Found = false;
    static TTile* CurrentTile;
    CurrentTile = this->TileList;
 
    //Exact position match
-   if (ExactPos) {
+   if (pExactPos) {
       //Exact Z position
-      if (ExactZ) {
+      if (pExactZ) {
          while(CurrentTile != NULL) {
-            if (CurrentTile->X == x && CurrentTile->Y == y && CurrentTile->Z == z)
+            if (CurrentTile->X == pX && CurrentTile->Y == pY && CurrentTile->Z == pZ)
                return CurrentTile;
             CurrentTile = CurrentTile->Next;
          }
          return NULL;
       } else { //First match in Z
          do{
-            CurrentTile = this->GetTile(x, y, z, true, true);
+            CurrentTile = this->GetTile(pX, pY, pZ, true, true);
             if (CurrentTile != NULL)
                return CurrentTile;
-            z -= 1;
-         } while(!Found && z >= 0);
+            pZ -= 1;
+         } while(!Found && pZ >= 0);
          return NULL;
       }
    } else {//Any tile at that location
       do {
-         CurrentTile = this->GetTile(x, y, z, true, true);
+         CurrentTile = this->GetTile(pX, pY, pZ, true, true);
          if (CurrentTile == NULL) {
-            CurrentTile = this->GetTile(x - 1, y, z, true, true);
+            CurrentTile = this->GetTile(pX - 1, pY, pZ, true, true);
             if (CurrentTile == NULL) {
-               CurrentTile = this->GetTile(x, y - 1, z, true, true);
+               CurrentTile = this->GetTile(pX, pY - 1, pZ, true, true);
                if (CurrentTile == NULL) {
-                  CurrentTile = this->GetTile(x - 1, y - 1, z, true, true);
+                  CurrentTile = this->GetTile(pX - 1, pY - 1, pZ, true, true);
                   if (CurrentTile != NULL)
                      Found = true;
             } else
@@ -731,11 +741,11 @@ TTile* TfTaipei::GetTile(int x, int y, int z, bool ExactPos, bool ExactZ)
        } else
          Found = true;
 
-         if (ExactZ)
+         if (pExactZ)
             return CurrentTile;
          else
-            z -= 1;
-     } while(!Found && z >= 0);
+            pZ -= 1;
+     } while(!Found && pZ >= 0);
 
      return CurrentTile;
    }
@@ -743,16 +753,16 @@ TTile* TfTaipei::GetTile(int x, int y, int z, bool ExactPos, bool ExactZ)
 }
 //---------------------------------------------------------------------------
 
-TTile* TfTaipei::GetTile(TPoint RealPos)
+TTile* TfTaipei::GetTile(TPoint pRealPos)
 {
    static TTile* CurrentTile;
    int x, y;
-   int z = MaxNumberLayer;
+   int z = MAXNUMBERLAYER;
    bool Found = false;
 
    do {
-      x = ((RealPos.x - 8) - (z * TileXOffset)) / HalfTileSize;
-      y = ((RealPos.y - 6) + (z * TileYOffset)) / HalfTileSize;
+      x = ((pRealPos.x - 8) - (z * TILEXOFFSET)) / HALFTILESIZE;
+      y = ((pRealPos.y - 6) + (z * TILEYOFFSET)) / HALFTILESIZE;
 
       CurrentTile = this->GetTile(x, y, z, false, true);
       if (CurrentTile != NULL)
@@ -826,111 +836,113 @@ bool TfTaipei::IsTileFree(TTile* pTile)
 }
 //---------------------------------------------------------------------------
 
-void TfTaipei::BuildStructure(int Mode)
+void TfTaipei::BuildStructure(int pMode)
 {
    TTile* NextTile;
    int IdCmp = 144;
    int i, j = 0;
    int x, y;
-   bool Buffer[GameWidth][GameHeight];
+   bool Buffer[GAMEWIDTH][GAMEHEIGHT];
    int Delta;
-   int *CurrLayer, *CurrSize;
-   int *Layer0, *Layer1, *Layer2, *Layer3, *Layer4, *Layer5, *Layer6;
+   const int *CurrLayer, *CurrSize;
+   const int *Layer0, *Layer1, *Layer2, *Layer3, *Layer4, *Layer5, *Layer6;
 
+   //Empty previous tile list
    while(this->TileList != NULL) {
      NextTile = this->TileList->Next;
      delete this->TileList;
      this->TileList = NextTile;
    }
 
-   //reset tile type array
+   //Reset tile type array
    for (i=0; i<36; i++) {
       this->TileType[j] = i;
       j++;
       this->TileType[j] = i;
       j++;
    }
+   //Reset special graph arrays
    for (i=0; i<4; i++) {
       this->SpecialGraph1[i] = i;
       this->SpecialGraph2[i] = i;
    }
 
-   switch(Mode) {
-      case 0 : CurrSize = DebugSize;
-               Layer0   = DebugL0;
-               Layer1   = DebugL1;
+   switch(pMode) {
+      case 0 : CurrSize = DEBUGSIZE;
+               Layer0   = DEBUGL0;
+               Layer1   = DEBUGL1;
                Layer2   = NULL;
                Layer3   = NULL;
                Layer4   = NULL;
                Layer5   = NULL;
                Layer6   = NULL;
          break;
-      case 1 : CurrSize = StandardSize;
-               Layer0   = StandardL0;
-               Layer1   = StandardL1;
-               Layer2   = StandardL2;
-               Layer3   = StandardL3;
-               Layer4   = StandardL4;
-               Layer5   = StandardL5;
-               Layer6   = StandardL6;
+      case 1 : CurrSize = STANDARDSIZE;
+               Layer0   = STANDARDL0;
+               Layer1   = STANDARDL1;
+               Layer2   = STANDARDL2;
+               Layer3   = STANDARDL3;
+               Layer4   = STANDARDL4;
+               Layer5   = STANDARDL5;
+               Layer6   = STANDARDL6;
          break;
-      case 2 : CurrSize = BridgeSize;
-               Layer0   = BridgeL0;
-               Layer1   = BridgeL1;
-               Layer2   = BridgeL2;
-               Layer3   = BridgeL3;
-               Layer4   = BridgeL4;
-               Layer5   = BridgeL5;
-               Layer6   = BridgeL6;
+      case 2 : CurrSize = BRIDGESIZE;
+               Layer0   = BRIDGEL0;
+               Layer1   = BRIDGEL1;
+               Layer2   = BRIDGEL2;
+               Layer3   = BRIDGEL3;
+               Layer4   = BRIDGEL4;
+               Layer5   = BRIDGEL5;
+               Layer6   = BRIDGEL6;
          break;
-      case 3 : CurrSize = CastleSize;
-               Layer0   = CastleL0;
-               Layer1   = CastleL1;
-               Layer2   = CastleL2;
-               Layer3   = CastleL3;
-               Layer4   = CastleL4;
+      case 3 : CurrSize = CASTLESIZE;
+               Layer0   = CASTLEL0;
+               Layer1   = CASTLEL1;
+               Layer2   = CASTLEL2;
+               Layer3   = CASTLEL3;
+               Layer4   = CASTLEL4;
                Layer5   = NULL;
                Layer6   = NULL;
          break;
-      case 4 : CurrSize = CubeSize;
-               Layer0   = CubeL0;
-               Layer1   = CubeL1;
-               Layer2   = CubeL2;
-               Layer3   = CubeL3;
-               Layer4   = CubeL4;
+      case 4 : CurrSize = CUBESIZE;
+               Layer0   = CUBEL0;
+               Layer1   = CUBEL1;
+               Layer2   = CUBEL2;
+               Layer3   = CUBEL3;
+               Layer4   = CUBEL4;
                Layer5   = NULL;
                Layer6   = NULL;
          break;
-      case 5 : CurrSize = GlyphSize;
-               Layer0   = GlyphL0;
-               Layer1   = GlyphL1;
-               Layer2   = GlyphL2;
-               Layer3   = GlyphL3;
-               Layer4   = GlyphL4;
-               Layer5   = GlyphL5;
+      case 5 : CurrSize = GLYPHSIZE;
+               Layer0   = GLYPHL0;
+               Layer1   = GLYPHL1;
+               Layer2   = GLYPHL2;
+               Layer3   = GLYPHL3;
+               Layer4   = GLYPHL4;
+               Layer5   = GLYPHL5;
                Layer6   = NULL;
          break;
-      case 6 : CurrSize = PyramidSize;
-               Layer0   = PyramidL0;
-               Layer1   = PyramidL1;
-               Layer2   = PyramidL2;
-               Layer3   = PyramidL3;
-               Layer4   = PyramidL4;
-               Layer5   = PyramidL5;
+      case 6 : CurrSize = PYRAMIDSIZE;
+               Layer0   = PYRAMIDL0;
+               Layer1   = PYRAMIDL1;
+               Layer2   = PYRAMIDL2;
+               Layer3   = PYRAMIDL3;
+               Layer4   = PYRAMIDL4;
+               Layer5   = PYRAMIDL5;
                Layer6   = NULL;
          break;
-      case 7 : CurrSize = SpiralSize;
-               Layer0   = SpiralL0;
-               Layer1   = SpiralL1;
-               Layer2   = SpiralL2;
-               Layer3   = SpiralL3;
-               Layer4   = SpiralL4;
+      case 7 : CurrSize = SPIRALSIZE;
+               Layer0   = SPIRALL0;
+               Layer1   = SPIRALL1;
+               Layer2   = SPIRALL2;
+               Layer3   = SPIRALL3;
+               Layer4   = SPIRALL4;
                Layer5   = NULL;
                Layer6   = NULL;
          break;
    }
 
-   for (i = MaxNumberLayer-1; i >= 0; i--) {
+   for (i = MAXNUMBERLAYER-1; i >= 0; i--) {
       if (CurrSize[i] > 0) {
          switch(i) {
             case 0 : CurrLayer = Layer0;
@@ -949,9 +961,10 @@ void TfTaipei::BuildStructure(int Mode)
                break;
             }
 
-         //int Buffer[31][17];
-         for (x=0; x<GameWidth; x++) {
-            for (y=0; y<GameHeight; y++) {
+         //Init layer Buffer
+         //Buffer[31][17];
+         for (x=0; x<GAMEWIDTH; x++) {
+            for (y=0; y<GAMEHEIGHT; y++) {
                Buffer[x][y] = false;
             }
          }
@@ -975,16 +988,18 @@ void TfTaipei::BuildStructure(int Mode)
                         10,12, 10,10, 10,8, 10,6,   \/
                         12,12, 12,10, 12,8, 12,6} <---- Finish Here */
 
+         //Set layer Buffer
          for(j=0; j<CurrSize[i]*2; j=j+2){
             x = CurrLayer[j];
             y = CurrLayer[j+1];
             Buffer[x][y] = true;
          }
 
-         //int Buffer[31][17];
-         for (x=0; x<GameWidth; x++) {
-            for (y=GameHeight-1; y>=0; y--) {
-               //INSERT
+         //Read layer Buffer 90 degree rotated
+         //Buffer[31][17];
+         for (x=0; x<GAMEWIDTH; x++) {
+            for (y=GAMEHEIGHT-1; y>=0; y--) {
+               //Insert into tile list
                if (Buffer[x][y]) {
                   NextTile = new TTile(IdCmp, x, y, i);
                   NextTile->Next = this->TileList;
@@ -999,26 +1014,25 @@ void TfTaipei::BuildStructure(int Mode)
 }
 //---------------------------------------------------------------------------
 
-void TfTaipei::FillStructure(int Seed, int Mode)
+void TfTaipei::FillStructure(int pSeed)
 {
    TTile* CurrentTile;
    TTile* CandidateTileA;
    TTile* CandidateTileB;
    int Swap, Target;
    int SpecGraph1 = 0, SpecGraph2 = 0;
-   int StepCmp = 0;
-   int LoopCmp;
+   int LoopCmp, StepCmp = 0;
    bool StartOver = false;
    TPoint MinXY;
    TPoint MaxXY;
-   MinXY.x = GameWidth;
-   MinXY.y = GameHeight;
+   MinXY.x = GAMEWIDTH;
+   MinXY.y = GAMEHEIGHT;
    MaxXY.x = 0;
    MaxXY.y = 0;
 
-   RandSeed = Seed;
+   RandSeed = pSeed;
 
-   //Shuffle tile type array
+   //Shuffle tile types array
    for (int i=0; i<10; i++) {
       for (int j=71; j>0; j--) {
          Target = Random(j);
@@ -1027,16 +1041,17 @@ void TfTaipei::FillStructure(int Seed, int Mode)
          this->TileType[Target] = Swap;
       }
    }
+   //Shuffle special types arrays
    for (int k=3; k>0; k--) {
       Target = Random(k);
-      Swap = SpecialGraph1[k];
-      SpecialGraph1[k] = SpecialGraph1[Target];
-      SpecialGraph1[Target] = Swap;
+      Swap = this->SpecialGraph1[k];
+      this->SpecialGraph1[k] = this->SpecialGraph1[Target];
+      this->SpecialGraph1[Target] = Swap;
 
       Target = Random(k);
-      Swap = SpecialGraph2[k];
-      SpecialGraph2[k] = SpecialGraph2[Target];
-      SpecialGraph2[Target] = Swap;
+      Swap = this->SpecialGraph2[k];
+      this->SpecialGraph2[k] = this->SpecialGraph2[Target];
+      this->SpecialGraph2[Target] = Swap;
    }
 
    //Find min/max to limit search
@@ -1053,6 +1068,7 @@ void TfTaipei::FillStructure(int Seed, int Mode)
          MinXY.y = CurrentTile->Y;
      CurrentTile = CurrentTile->Next;
    }
+   //Number of tile pairs/loop steps
    if (StepCmp % 2 == 1)
       StepCmp--;
    StepCmp = StepCmp / 2;
@@ -1134,7 +1150,7 @@ void TfTaipei::FillStructure(int Seed, int Mode)
 }
 //---------------------------------------------------------------------------
 
-TTile* TfTaipei::FindCandidate(TPoint MinXY, TPoint MaxXY)
+TTile* TfTaipei::FindCandidate(TPoint pMinXY, TPoint pMaxXY)
 {
    static TTile* CandidateTile;
    int x, y, z;
@@ -1145,13 +1161,12 @@ TTile* TfTaipei::FindCandidate(TPoint MinXY, TPoint MaxXY)
    //May take multiple tries
    do{
       StartOver = false;
-      x = MinXY.x + Random(MaxXY.x - MinXY.x + 1);
-      y = MinXY.y + Random(MaxXY.y - MinXY.y + 1);
-      z = MaxNumberLayer;
+      x = pMinXY.x + Random(pMaxXY.x - pMinXY.x + 1);
+      y = pMinXY.y + Random(pMaxXY.y - pMinXY.y + 1);
+      z = MAXNUMBERLAYER;
       Found = false;
 
       //Find an available tile at a position
-      //CandidateTile = this->GetTile(x, y, 7, false, false);
       do {
          CandidateTile = this->GetTile(x, y, z, false, true);
          if (CandidateTile != NULL)
@@ -1163,12 +1178,12 @@ TTile* TfTaipei::FindCandidate(TPoint MinXY, TPoint MaxXY)
          StartOver = true;
       else {
          if (this->DebugDraw) {
-            CandidateTile->Debug = 2;
+            CandidateTile->Debug = 1;
             this->Repaint();
             CandidateTile->Debug = 0;
          }
          //If tile not available
-         if (CandidateTile->Type != -1 || !IsTileFree(CandidateTile))
+         if (CandidateTile->Type != -1 || !this->IsTileFree(CandidateTile))
             StartOver = true;
       }
       GiveUpCounter--;
@@ -1181,30 +1196,32 @@ TTile* TfTaipei::FindCandidate(TPoint MinXY, TPoint MaxXY)
 }
 //---------------------------------------------------------------------------
 
-void TfTaipei::AssignTypeGraph(TTile* CandidateTileA, TTile* CandidateTileB, int Delta, int& SpecGraph1, int& SpecGraph2)
+void TfTaipei::AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, int pDelta, int& pSpecGraph1, int& pSpecGraph2)
 {
-   CandidateTileA->Type  = this->TileType[Delta];
-   CandidateTileA->Graph = this->TileType[Delta];
+   pCandidateTileA->Type  = this->TileType[pDelta];
+   pCandidateTileA->Graph = this->TileType[pDelta];
 
-   if (this->TileType[Delta] == 34) {
-      CandidateTileA->Graph = CandidateTileA->Graph + this->SpecialGraph1[SpecGraph1];
-      SpecGraph1++;
+   //If tile A is Season or Plant, take care of the special graph
+   if (this->TileType[pDelta] == 34) {
+      pCandidateTileA->Graph = pCandidateTileA->Graph + this->SpecialGraph1[pSpecGraph1];
+      pSpecGraph1++;
    }
-   if (this->TileType[Delta] == 35) {
-      CandidateTileA->Graph = CandidateTileA->Graph + 3 + this->SpecialGraph2[SpecGraph2];
-      SpecGraph2++;
+   if (this->TileType[pDelta] == 35) {
+      pCandidateTileA->Graph = pCandidateTileA->Graph + 3 + this->SpecialGraph2[pSpecGraph2];
+      pSpecGraph2++;
    }
 
-   CandidateTileB->Type  = this->TileType[Delta];
-   CandidateTileB->Graph = this->TileType[Delta];
+   pCandidateTileB->Type  = this->TileType[pDelta];
+   pCandidateTileB->Graph = this->TileType[pDelta];
 
-   if (this->TileType[Delta] == 34) {
-      CandidateTileB->Graph = CandidateTileB->Graph + this->SpecialGraph1[SpecGraph1];
-      SpecGraph1++;
+   //If tile B is Season or Plant, take care of the special graph
+   if (this->TileType[pDelta] == 34) {
+      pCandidateTileB->Graph = pCandidateTileB->Graph + this->SpecialGraph1[pSpecGraph1];
+      pSpecGraph1++;
    }
-   if (this->TileType[Delta] == 35) {
-      CandidateTileB->Graph = CandidateTileB->Graph + 3 + this->SpecialGraph2[SpecGraph2];
-      SpecGraph2++;
+   if (this->TileType[pDelta] == 35) {
+      pCandidateTileB->Graph = pCandidateTileB->Graph + 3 + this->SpecialGraph2[pSpecGraph2];
+      pSpecGraph2++;
    }
 }
 //---------------------------------------------------------------------------
