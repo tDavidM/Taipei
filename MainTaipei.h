@@ -345,6 +345,35 @@ const int SPIRALL4[4*2]  = {                       15,6,
                                                 14,9  };
 //---------------------------------------------------------------------------
 
+const int DRAGONSIZE[7] = {87, 36, 16, 4, 1, 0, 0}; //144
+const int DRAGONL0[87*2] = {
+    2,0,  4,0,  6,0,  8,0,  10,0,  12,0,  14,0,  16,0,  18,0,  20,0,  22,0,  24,0,
+                6,2,  8,2,  10,2,  12,2,  14,2,  16,2,  18,2,  20,2,
+          4,4,  6,4,  8,4,  10,4,  12,4,  14,4,  16,4,  18,4,  20,4,  22,4,
+    2,6,  4,6,  6,6,  8,6,  10,6,  12,6,  14,6,  16,6,  18,6,  20,6,  22,6,  24,6,
+0,7,                                                                              26,7, 28,7,
+    2,8,  4,8,  6,8,  8,8,  10,8,  12,8,  14,8,  16,8,  18,8,  20,8,  22,8,  24,8,
+          4,10, 6,10, 8,10, 10,10, 12,10, 14,10, 16,10, 18,10, 20,10, 22,10,
+                6,12, 8,12, 10,12, 12,12, 14,12, 16,12, 18,12, 20,12,
+    2,14, 4,14, 6,14, 8,14, 10,14, 12,14, 14,14, 16,14, 18,14, 20,14, 22,14, 24,14};
+
+const int DRAGONL1[36*2] = {
+                      8,2,  10,2,  12,2,  14,2,  16,2,  18,2,
+                      8,4,  10,4,  12,4,  14,4,  16,4,  18,4,
+                      8,6,  10,6,  12,6,  14,6,  16,6,  18,6,
+                      8,8,  10,8,  12,8,  14,8,  16,8,  18,8,
+                      8,10, 10,10, 12,10, 14,10, 16,10, 18,10,
+                      8,12, 10,12, 12,12, 14,12, 16,12, 18,12 };
+const int DRAGONL2[16*2] = {10,4,  12,4,  14,4,  16,4,
+                            10,6,  12,6,  14,6,  16,6,
+                            10,8,  12,8,  14,8,  16,8,
+                            10,10, 12,10, 14,10, 16,10 };
+const int DRAGONL3[4*2] = {        12,6,  14,6,
+                                   12,8,  14,8 };
+const int DRAGONL4[1*2] = {            13,7 };
+
+//---------------------------------------------------------------------------
+
 class TTile
 {
 private:
@@ -402,6 +431,19 @@ __published:
    TMenuItem *N1;
    TMenuItem *N2;
    TMenuItem *N3;
+   TMenuItem *mColor;
+   TMenuItem *mDragon;
+   TImageList *mlTilesBW;
+   TMenuItem *mWatchBuilds;
+   TMenuItem *N4;
+   TMenuItem *mStrategy;
+   TMenuItem *mLighten;
+   TMenuItem *mDarken;
+   TMenuItem *mDifficulty;
+   TMenuItem *mBeginner;
+   TMenuItem *mExpert;
+   TMenuItem *mPeek;
+   TMenuItem *mHowtoPlay;
    void __fastcall mExitClick(TObject *Sender);
    void __fastcall FormCreate(TObject *Sender);
    void __fastcall mMessagesClick(TObject *Sender);
@@ -421,6 +463,10 @@ __published:
    void __fastcall FormPaint(TObject *Sender);
    void __fastcall FormMouseDown(TObject *Sender, TMouseButton Button,
           TShiftState Shift, int X, int Y);
+   void __fastcall mColorClick(TObject *Sender);
+   void __fastcall mWatchBuildsClick(TObject *Sender);
+   void __fastcall mStrategyClick(TObject *Sender);
+   void __fastcall mHowtoPlayClick(TObject *Sender);
 private:
    int Mode;
    int StepBack;

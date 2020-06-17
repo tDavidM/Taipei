@@ -79,13 +79,56 @@ void __fastcall TfTaipei::mMessagesClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+void __fastcall TfTaipei::mColorClick(TObject *Sender)
+{
+   this->mColor->Checked = !this->mColor->Checked;
+   this->Repaint();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mWatchBuildsClick(TObject *Sender)
+{
+   this->mWatchBuilds->Checked = !this->mWatchBuilds->Checked;
+}
+//---------------------------------------------------------------------------
+
 void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 {
    AnsiString DialogCap = "About " + this->Caption;
-   Application->MessageBox("Taipei\n\nClone by David Morrissette\n\n2020",
-                           DialogCap.c_str() ,MB_OK);
+   Application->MessageBox("Taipei !\n\nClone by David Morrissette\n\nPress T in main window for more options\n\n2020",
+                           DialogCap.c_str(), MB_OK);
 }
 //--------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mHowtoPlayClick(TObject *Sender)
+{
+   AnsiString DialogText = "Taipei is a modern, solitaire version of the ancient oriental game, Mah-Jongg.\n\n"
+                           "Playing Taipei is simple.\n"
+                           "The object of Taipei is to remove all of the tiles from the board.\n\n"
+                           "Tiles are removed from the board in matching pairs.\n"
+                           "Tiles can only be removed if they are \"free\".\n"
+                           "A tile is \"free\" if:\n"
+                           "  1) it has no tiles on top of it, and\n"
+                           "  2) you can \"slide\" the tile out to the right or left.";
+
+   Application->MessageBox(DialogText.c_str(), "What is Taipei?", MB_OK);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mStrategyClick(TObject *Sender)
+{
+   AnsiString DialogText = "Winning a game is much like solving an intricate puzzle.\n"
+                           "One false move at the beginning could ruin your chances at victory.\n"
+                           "And, while every game has a solution, finding it often takes hours of diligent play.\n\n"
+                           "Here are some hints if you are having difficulty solving the Taipei puzzles:\n"
+                           "1.  Remove the end tiles as soon as you can, "
+                           "especially those tiles that block more than one tile.\n"
+                           "2.  If all four tiles in a matching set are free, you can remove all four safely.\n"
+                           "3.  Work from the outside in.";
+
+   Application->MessageBox(DialogText.c_str(), "Strategy", MB_OK);
+}
+//---------------------------------------------------------------------------
 
 void __fastcall TfTaipei::mStartOverClick(TObject *Sender)
 {
@@ -144,6 +187,11 @@ void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
 
    if (Key == 0x48 /*VK_KEY_H*/)
       this->mHint->Click();
+
+   if (Key == 0x54 /*VK_KEY_H*/) {
+      this->mDragon->Visible = true;
+      this->mWatchBuilds->Visible = true;
+   }
 }
 //---------------------------------------------------------------------------
 
@@ -152,7 +200,7 @@ void __fastcall TfTaipei::FormShow(TObject *Sender)
    this->TileList     = NULL;
    this->SelectedTile = NULL;
 
-   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 1.00\nClone by David Morrissette\n2020";
+   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020";
    this->lMainTitleShadow->Caption = this->lMainTitle->Caption;
 }
 //---------------------------------------------------------------------------
@@ -166,6 +214,7 @@ void __fastcall TfTaipei::mLayoutMenuClick(TObject *Sender)
    this->mGlyph->Checked    = false;
    this->mPyramid->Checked  = false;
    this->mSpiral->Checked   = false;
+   this->mDragon->Checked   = false;
 
    TMenuItem *Current = (TMenuItem *)Sender;
    Current->Checked = true;
@@ -460,7 +509,7 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
       if (CurrentTile->Visible) {
          if (!this->IsTileFree(CurrentTile)) {
             if (this->mMessages->Checked)
-               Application->MessageBox("Tiles isn't free", "Taipei" , MB_OK | MB_ICONINFORMATION);
+               Application->MessageBox("Tiles isn't free", "Taipei", MB_OK | MB_ICONINFORMATION);
          } else {
             //Select 1 tile
             if (this->SelectedTile == NULL) {
@@ -484,7 +533,7 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
                      CurrentTile->Selected = false;
                      this->Repaint();
                      if (this->mMessages->Checked)
-                        Application->MessageBox("Tiles don't match", "Taipei" , MB_OK | MB_ICONINFORMATION);
+                        Application->MessageBox("Tiles don't match", "Taipei", MB_OK | MB_ICONINFORMATION);
                   }
                }
             }
@@ -525,8 +574,9 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
       if (this->GamedDone <= 0) {
          this->tAutoPlay->Enabled = false;
          this->mAutoPlay->Checked = false;
+         
          MsgNo = Random(CONGRATSIZE-1);
-         Application->MessageBox(gCongrat[MsgNo].c_str(), "Winner'qus Fortune" , MB_OK | MB_ICONEXCLAMATION);
+         Application->MessageBox(gCongrat[MsgNo].c_str(), "Winner'qus Fortune", MB_OK | MB_ICONEXCLAMATION);
       }
       this->GamedDone = 32; // :-) if you back enough moves, you get a winning message
    } else {
@@ -549,7 +599,7 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
 
       if (!Found) {
          if (!pAutoPlay)
-            Application->MessageBox("No free tiles", "Taipei" , MB_OK | MB_ICONSTOP);
+            Application->MessageBox("No free tiles", "Taipei", MB_OK | MB_ICONSTOP);
          else {
             this->tAutoPlay->Enabled = false;
             this->mAutoPlay->Checked = false;
@@ -600,6 +650,9 @@ void TfTaipei::DrawTile(int pId, bool pSel, int pX, int pY, int pZ, bool pNotch,
 
    this->Canvas->Pen->Color = clBlack;
 
+//clLtGray
+//clDkGray
+
    switch(pDebug) { 
       case 0 : this->Canvas->Brush->Color = clGray; //Normal Mode
          break;     
@@ -635,7 +688,11 @@ void TfTaipei::DrawTile(int pId, bool pSel, int pX, int pY, int pZ, bool pNotch,
       this->Canvas->Brush->Color = clWhite;
       this->Canvas->Rectangle(RealX, RealY, RealX + TILESIZE, RealY + TILESIZE); //Top Face
 
-      this->mlTiles->GetBitmap(pId, TileGraph);
+      if (this->mColor->Checked)
+         this->mlTiles->GetBitmap(pId, TileGraph);
+      else
+         this->mlTilesBW->GetBitmap(pId, TileGraph);
+
       if(pSel)
          this->Invert(TileGraph);
 
@@ -940,6 +997,15 @@ void TfTaipei::BuildStructure(int pMode)
                Layer5   = NULL;
                Layer6   = NULL;
          break;
+      case 8 : CurrSize = DRAGONSIZE;
+               Layer0   = DRAGONL0;
+               Layer1   = DRAGONL1;
+               Layer2   = DRAGONL2;
+               Layer3   = DRAGONL3;
+               Layer4   = DRAGONL4;
+               Layer5   = NULL;
+               Layer6   = NULL;
+         break;
    }
 
    for (i = MAXNUMBERLAYER-1; i >= 0; i--) {
@@ -1141,11 +1207,27 @@ void TfTaipei::FillStructure(int pSeed)
       Application->ProcessMessages();
    } while(StepCmp > 0);
 
-   //Make all tiles visible
-   CurrentTile = this->TileList;
-   while(CurrentTile != NULL) {
-      CurrentTile->Visible = true;
-      CurrentTile = CurrentTile->Next;
+   //Make all tiles visible, with or without animation
+   if (this->mWatchBuilds->Checked) {
+
+      while(LoopCmp >= 0) {
+         CurrentTile = this->TileList;
+         while(CurrentTile != NULL) {
+            if (CurrentTile->Hint >= LoopCmp)
+               CurrentTile->Visible = true;
+            CurrentTile = CurrentTile->Next;
+         }
+
+         this->Repaint();
+         Sleep(10);
+         LoopCmp--;
+      }
+   } else {
+      CurrentTile = this->TileList;
+      while(CurrentTile != NULL) {
+         CurrentTile->Visible = true;
+         CurrentTile = CurrentTile->Next;
+      }
    }
 }
 //---------------------------------------------------------------------------
@@ -1210,6 +1292,11 @@ void TfTaipei::AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, i
       pCandidateTileA->Graph = pCandidateTileA->Graph + 3 + this->SpecialGraph2[pSpecGraph2];
       pSpecGraph2++;
    }
+   int SpecialTile = Random(2048);
+   if (this->TileType[pDelta] == 33 && SpecialTile == 0) {
+      pCandidateTileA->Graph = pCandidateTileA->Graph + 10;
+      pSpecGraph1++;
+   }
 
    pCandidateTileB->Type  = this->TileType[pDelta];
    pCandidateTileB->Graph = this->TileType[pDelta];
@@ -1221,6 +1308,10 @@ void TfTaipei::AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, i
    }
    if (this->TileType[pDelta] == 35) {
       pCandidateTileB->Graph = pCandidateTileB->Graph + 3 + this->SpecialGraph2[pSpecGraph2];
+      pSpecGraph2++;
+   }
+   if (this->TileType[pDelta] == 33 && SpecialTile == 0) {
+      pCandidateTileB->Graph = pCandidateTileB->Graph + 10;
       pSpecGraph2++;
    }
 }
