@@ -2,6 +2,7 @@
 
 #include <vcl.h>
 #include <mmsystem.h>
+#include <algorithm> 
 #pragma hdrstop
 
 #include "MainTaipei.h"
@@ -61,6 +62,9 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
    Application->Icon = this->Icon;
    this->Mode = 1;
    this->DebugDraw = false;
+   this->Shade = 2;
+   this->Radius = 0;
+   this->Peek = false;
 
    for (int i=1;i<=ParamCount();i++) {
       if (LowerCase(ParamStr(i)) != "") {
@@ -94,9 +98,11 @@ void __fastcall TfTaipei::mWatchBuildsClick(TObject *Sender)
 
 void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 {
-   AnsiString DialogCap = "About " + this->Caption;
-   Application->MessageBox("Taipei !\n\nClone by David Morrissette\n\nPress T in main window for more options\n\n2020",
-                           DialogCap.c_str(), MB_OK);
+   AnsiString DialogText = "Taipei !\n\nOriginal by Dave Norris\n"
+                           "Clone by David Morrissette\n\n2020\n\n\nPress T in main window for more options";
+   AnsiString DialogCap  = "About " + this->Caption;
+
+   Application->MessageBox(DialogText.c_str(), DialogCap.c_str(), MB_OK);
 }
 //--------------------------------------------------------------------------
 
@@ -126,7 +132,74 @@ void __fastcall TfTaipei::mStrategyClick(TObject *Sender)
                            "2.  If all four tiles in a matching set are free, you can remove all four safely.\n"
                            "3.  Work from the outside in.";
 
-   Application->MessageBox(DialogText.c_str(), "Strategy", MB_OK);
+   Application->MessageBox(DialogText.c_str(), "Strategy", MB_OK); // MB_HELP
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
+      TShiftState Shift)
+{
+   if(Key == 0x8 /*BackSpace*/)
+      this->mBackup->Click();
+
+   if (Key == 0x48 /*VK_KEY_H*/)
+      this->mHint->Click();
+
+   if (Key == 0x54 /*VK_KEY_H*/) {
+      this->mDragon->Visible = true;
+      this->mWatchBuilds->Visible = true;
+   }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mDarkenClick(TObject *Sender)
+{
+   if (this->Shade > 0)
+      this->Shade--;
+
+   this->Repaint();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mLightenClick(TObject *Sender)
+{
+   if (this->Shade < 4)
+      this->Shade++;
+
+   this->Repaint();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mPeekClick(TObject *Sender)
+{
+   this->Peek = !this->Peek;
+   this->mPeek->Checked = !this->mPeek->Checked;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mBeginnerClick(TObject *Sender)
+{
+   this->Radius = 3;
+   this->mExpert->Checked   = false;
+   this->mBeginner->Checked = true;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mExpertClick(TObject *Sender)
+{
+   this->Radius = 0;
+   this->mExpert->Checked   = true;
+   this->mBeginner->Checked = false;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::FormShow(TObject *Sender)
+{
+   this->TileList     = NULL;
+   this->SelectedTile = NULL;
+
+   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020";
+   this->lMainTitleShadow->Caption = this->lMainTitle->Caption;
 }
 //---------------------------------------------------------------------------
 
@@ -176,32 +249,6 @@ void __fastcall TfTaipei::mBackupClick(TObject *Sender)
       this->HintLoop = 0;
       this->Repaint();
    }
-}
-//---------------------------------------------------------------------------
-
-void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
-      TShiftState Shift)
-{
-   if(Key == 0x8 /*BackSpace*/)
-      this->mBackup->Click();
-
-   if (Key == 0x48 /*VK_KEY_H*/)
-      this->mHint->Click();
-
-   if (Key == 0x54 /*VK_KEY_H*/) {
-      this->mDragon->Visible = true;
-      this->mWatchBuilds->Visible = true;
-   }
-}
-//---------------------------------------------------------------------------
-
-void __fastcall TfTaipei::FormShow(TObject *Sender)
-{
-   this->TileList     = NULL;
-   this->SelectedTile = NULL;
-
-   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020";
-   this->lMainTitleShadow->Caption = this->lMainTitle->Caption;
 }
 //---------------------------------------------------------------------------
 
@@ -477,10 +524,15 @@ void __fastcall TfTaipei::FormMouseMove(TObject *Sender, TShiftState Shift,
    CurrentTile = this->GetTile(Pos);
    if (CurrentTile != NULL) {
       this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":" + IntToStr(CurrentTile->Hint);
-      if (CurrentTile->Visible && this->IsTileFree(CurrentTile))
-         Screen->Cursor = crCross;
-      else
-         Screen->Cursor = crDefault;
+
+      if (this->Peek && CurrentTile->Z > 0 ) {
+         Screen->Cursor = crHelp;  //crHandPoint; crDrag;
+      } else {
+         if (this->IsTileFree(CurrentTile))
+            Screen->Cursor = crCross;
+         else
+            Screen->Cursor = crDefault;
+      }
    } else
       Screen->Cursor = crDefault;
 }
@@ -506,7 +558,15 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
       this->tAutoPlay->Enabled = false;
       this->mAutoPlay->Checked = false;
       
-      if (CurrentTile->Visible) {
+      if (this->Peek) {
+         CurrentTile->Visible = false;
+         this->Repaint();
+         this->Peek = false;
+         this->mPeek->Checked = false;
+         Sleep(750);
+         CurrentTile->Visible = true;
+         this->Repaint();
+      } else {
          if (!this->IsTileFree(CurrentTile)) {
             if (this->mMessages->Checked)
                Application->MessageBox("Tiles isn't free", "Taipei", MB_OK | MB_ICONINFORMATION);
@@ -650,16 +710,28 @@ void TfTaipei::DrawTile(int pId, bool pSel, int pX, int pY, int pZ, bool pNotch,
 
    this->Canvas->Pen->Color = clBlack;
 
-//clLtGray
-//clDkGray
-
-   switch(pDebug) { 
-      case 0 : this->Canvas->Brush->Color = clGray; //Normal Mode
-         break;     
-      case 1 : this->Canvas->Brush->Color = clBlue; //Debug color mode
-         break;     
-      case 2 : this->Canvas->Brush->Color = clBlack;
-         break;
+   if (pDebug > 0) {
+      //Debug color mode
+      switch(pDebug) {
+         case 1 : this->Canvas->Brush->Color = clBlue; 
+            break;
+         case 2 : this->Canvas->Brush->Color = clBlack;
+            break;
+      }
+   } else {
+      //Normal Mode
+      switch(this->Shade) {
+         case 0 : this->Canvas->Brush->Color = clBlack;
+            break;
+         case 1 : this->Canvas->Brush->Color = (TColor) 4210752;
+            break;
+         case 2 : this->Canvas->Brush->Color = clGray; //clDkGray
+            break;
+         case 3 : this->Canvas->Brush->Color = clLtGray; //clSilver
+            break;
+         case 4 : this->Canvas->Brush->Color = clWhite;
+            break;
+      }
    }
 
    LeftSide[0] = Point(RealX, RealY); //Upper Left Corner (Top)
@@ -1089,8 +1161,7 @@ void TfTaipei::FillStructure(int pSeed)
    int SpecGraph1 = 0, SpecGraph2 = 0;
    int LoopCmp, StepCmp = 0;
    bool StartOver = false;
-   TPoint MinXY;
-   TPoint MaxXY;
+   TPoint MinXY, MaxXY, LocalMin, LocalMax;
    MinXY.x = GAMEWIDTH;
    MinXY.y = GAMEHEIGHT;
    MaxXY.x = 0;
@@ -1166,7 +1237,17 @@ void TfTaipei::FillStructure(int pSeed)
             Sleep(10);
          }
          //Find a second tile
-         CandidateTileB = this->FindCandidate(MinXY, MaxXY);
+         if (this->Radius > 0) {
+            LocalMin.x = std::max(CandidateTileA->X - this->Radius, (int)MinXY.x);
+            LocalMin.y = std::max(CandidateTileA->Y - this->Radius, (int)MinXY.y);
+            LocalMax.x = std::min(CandidateTileA->X + this->Radius, (int)MaxXY.x);
+            LocalMax.y = std::min(CandidateTileA->Y + this->Radius, (int)MaxXY.y);
+            CandidateTileB = this->FindCandidate(LocalMin, LocalMax);
+            if (CandidateTileB == NULL)
+               CandidateTileB = this->FindCandidate(MinXY, MaxXY);
+         } else {
+            CandidateTileB = this->FindCandidate(MinXY, MaxXY);
+         }
          if (CandidateTileB != NULL) {
             CandidateTileB->Type = 99;
             if (this->DebugDraw) {

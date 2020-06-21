@@ -467,6 +467,11 @@ __published:
    void __fastcall mWatchBuildsClick(TObject *Sender);
    void __fastcall mStrategyClick(TObject *Sender);
    void __fastcall mHowtoPlayClick(TObject *Sender);
+   void __fastcall mDarkenClick(TObject *Sender);
+   void __fastcall mLightenClick(TObject *Sender);
+   void __fastcall mPeekClick(TObject *Sender);
+   void __fastcall mBeginnerClick(TObject *Sender);
+   void __fastcall mExpertClick(TObject *Sender);
 private:
    int Mode;
    int StepBack;
@@ -475,7 +480,9 @@ private:
    int TileType[72];
    int SpecialGraph1[4];
    int SpecialGraph2[4];
-
+   int Shade;
+   int Radius;
+   bool Peek;
    bool DebugDraw;
 
    TTile* TileList;
