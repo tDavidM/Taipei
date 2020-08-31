@@ -1264,7 +1264,7 @@ void TfTaipei::FillStructure(int pSeed)
          //Assign Type and Graphics to both
          CandidateTileA->Visible = false;
          CandidateTileB->Visible = false;
-         this->AssignTypeGraph(CandidateTileA, CandidateTileB, StepCmp, SpecGraph1, SpecGraph2);
+         this->AssignTypeGraph(CandidateTileA, CandidateTileB, StepCmp-1, SpecGraph1, SpecGraph2);
          CandidateTileA->Hint = LoopCmp-StepCmp;
          CandidateTileB->Hint = LoopCmp-StepCmp;
          StepCmp--;
