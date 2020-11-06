@@ -12,6 +12,11 @@
 #include <ExtCtrls.hpp>
 #include <Graphics.hpp>
 #include <XPMan.hpp>
+#include <Dialogs.hpp>
+#include <msxmldom.hpp>
+#include <XMLDoc.hpp>
+#include <xmldom.hpp>
+#include <XMLIntf.hpp>
 
 #define CONGRATSIZE 39
 
@@ -391,6 +396,7 @@ public:
 
   bool Selected;
   bool Visible;
+  bool WireFrame;
 
   TTile(int pId, int pX, int pY, int pZ);
 };
@@ -444,6 +450,32 @@ __published:
    TMenuItem *mExpert;
    TMenuItem *mPeek;
    TMenuItem *mHowtoPlay;
+   TMenuItem *mFile;
+   TMenuItem *mSave;
+   TMenuItem *mLoad;
+   TMenuItem *mCreate;
+   TMenuItem *mPlay;
+   TMenuItem *N5;
+   TXMLDocument *XMLDoc;
+   TSaveDialog *GameSaveDialog;
+   TOpenDialog *GameOpenDialog;
+   TMenuItem *mDebug;
+   TSaveDialog *LayoutSaveDialog;
+   TOpenDialog *LayoutOpenDialog;
+   TMainMenu *mMainLayout;
+   TMenuItem *mCreateLayout;
+   TMenuItem *mSaveLayout;
+   TMenuItem *mExitLayout;
+   TMenuItem *mLayer;
+   TMenuItem *mLayer7;
+   TMenuItem *mLayer6;
+   TMenuItem *mLayer5;
+   TMenuItem *mLayer4;
+   TMenuItem *mLayer3;
+   TMenuItem *mLayer2;
+   TMenuItem *mLayer1;
+   TMenuItem *mEditLayout;
+   TLabel *lNbTileLayout;
    void __fastcall mExitClick(TObject *Sender);
    void __fastcall FormCreate(TObject *Sender);
    void __fastcall mMessagesClick(TObject *Sender);
@@ -451,7 +483,6 @@ __published:
    void __fastcall mStartOverClick(TObject *Sender);
    void __fastcall mBackupClick(TObject *Sender);
    void __fastcall FormKeyDown(TObject *Sender, WORD &Key, TShiftState Shift);
-   void __fastcall FormShow(TObject *Sender);
    void __fastcall mLayoutMenuClick(TObject *Sender);
    void __fastcall mNewClick(TObject *Sender);
    void __fastcall mSelectClick(TObject *Sender);
@@ -472,8 +503,17 @@ __published:
    void __fastcall mPeekClick(TObject *Sender);
    void __fastcall mBeginnerClick(TObject *Sender);
    void __fastcall mExpertClick(TObject *Sender);
+   void __fastcall mSaveClick(TObject *Sender);
+   void __fastcall mLoadClick(TObject *Sender);
+   void __fastcall mCreateClick(TObject *Sender);
+   void __fastcall mPlayClick(TObject *Sender);
+   void __fastcall mLayerClick(TObject *Sender);
+   void __fastcall mExitLayoutClick(TObject *Sender);
+   void __fastcall mEditLayoutClick(TObject *Sender);
+   void __fastcall mSaveLayoutClick(TObject *Sender);
 private:
    int Mode;
+   int GameNumber;
    int StepBack;
    int GamedDone;
    int HintLoop;
@@ -484,15 +524,18 @@ private:
    int Radius;
    bool Peek;
    bool DebugDraw;
+   int EditLayer;
 
    TTile* TileList;
    TTile* SelectedTile;
+
+   void InitGame(int pGameNo);
 
    void HideTileStep(TTile* pTile, bool pAutoPlay = false);
 
    Byte __fastcall TfTaipei::CustomIntToByte(int pByte);
    void __fastcall Invert(Graphics::TBitmap *pBitmap);
-   void DrawTile(int pId, bool pSel, int pX, int pY, int pZ, bool pNotch = false, int pDebug = 0);
+   void DrawTile(int pId, bool pSel, int pRealX, int pRealY, bool pNotch = false, int pDebug = 0);
    void DrawAllTiles(void);
 
    TTile* GetTile(int pX, int pY, int pZ, bool pExactPos = true, bool pExactZ = true);
@@ -503,7 +546,6 @@ private:
    void FillStructure(int pSeed);
    TTile* FindCandidate(TPoint pMinXY, TPoint pMaxXY);
    void AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, int pDelta, int& pSpecGraph1, int& pSpecGraph2);
-
 
 public:
    __fastcall TfTaipei(TComponent* Owner);

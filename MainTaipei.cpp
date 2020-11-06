@@ -2,7 +2,8 @@
 
 #include <vcl.h>
 #include <mmsystem.h>
-#include <algorithm> 
+#include <algorithm>
+#include <exception>
 #pragma hdrstop
 
 #include "MainTaipei.h"
@@ -38,8 +39,9 @@ TTile::TTile(int pId, int pX, int pY, int pZ)
    this->Hint  = -1;
    this->Debug = 0;
 
-   this->Selected = false;
-   this->Visible  = false;
+   this->Selected  = false;
+   this->Visible   = false;
+   this->WireFrame = false;
 }
 
 //---------------------------------------------------------------------------
@@ -60,11 +62,20 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
 {
    this->DoubleBuffered = true;
    Application->Icon = this->Icon;
+
+   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020";
+   this->lMainTitleShadow->Caption = this->lMainTitle->Caption;
+
    this->Mode = 1;
    this->DebugDraw = false;
-   this->Shade = 2;
+   this->Shade = 4;
    this->Radius = 0;
    this->Peek = false;
+
+   this->TileList     = NULL;
+   this->SelectedTile = NULL;
+
+   this->ClientHeight = 310;
 
    for (int i=1;i<=ParamCount();i++) {
       if (LowerCase(ParamStr(i)) != "") {
@@ -102,6 +113,12 @@ void __fastcall TfTaipei::mAboutClick(TObject *Sender)
                            "Clone by David Morrissette\n\n2020\n\n\nPress T in main window for more options";
    AnsiString DialogCap  = "About " + this->Caption;
 
+   if (this->mDragon->Visible) {
+      DialogText = DialogText + "\n or Ctrl+T";
+      if (this->mPeek->Visible)
+         DialogText = DialogText + "\n or Shift+T";
+      DialogText = DialogText + "\n these options were available in lesser known versions of Taipei.";
+   }
    Application->MessageBox(DialogText.c_str(), DialogCap.c_str(), MB_OK);
 }
 //--------------------------------------------------------------------------
@@ -146,15 +163,29 @@ void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
       this->mHint->Click();
 
    if (Key == 0x54 /*VK_KEY_H*/) {
-      this->mDragon->Visible = true;
+      this->mDragon->Visible      = true;
       this->mWatchBuilds->Visible = true;
+      if (Shift.Contains(ssCtrl)) {
+         this->mLighten->Visible    = true;
+         this->mDarken->Visible     = true;
+         this->mDifficulty->Visible = true;
+         this->mPeek->Visible       = true;
+      }
+      if (Shift.Contains(ssShift)) {
+         this->mFile->Visible = true;
+      }
+      if (Shift.Contains(ssAlt)) {
+         this->N5->Visible      = true;
+         this->mCreate->Visible = true;
+         this->mPlay->Visible   = true;
+      }
    }
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TfTaipei::mDarkenClick(TObject *Sender)
 {
-   if (this->Shade > 0)
+   if (this->Shade > 1)
       this->Shade--;
 
    this->Repaint();
@@ -163,7 +194,7 @@ void __fastcall TfTaipei::mDarkenClick(TObject *Sender)
 
 void __fastcall TfTaipei::mLightenClick(TObject *Sender)
 {
-   if (this->Shade < 4)
+   if (this->Shade < 8)
       this->Shade++;
 
    this->Repaint();
@@ -190,16 +221,6 @@ void __fastcall TfTaipei::mExpertClick(TObject *Sender)
    this->Radius = 0;
    this->mExpert->Checked   = true;
    this->mBeginner->Checked = false;
-}
-//---------------------------------------------------------------------------
-
-void __fastcall TfTaipei::FormShow(TObject *Sender)
-{
-   this->TileList     = NULL;
-   this->SelectedTile = NULL;
-
-   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020";
-   this->lMainTitleShadow->Caption = this->lMainTitle->Caption;
 }
 //---------------------------------------------------------------------------
 
@@ -275,23 +296,10 @@ void __fastcall TfTaipei::mNewClick(TObject *Sender)
 {
    int GameNo;
 
-   this->tAutoPlay->Enabled = false;
-   this->mAutoPlay->Checked = false;
-   this->iMainLogo->Visible = false;
-   this->lMainTitleShadow->Visible = false;
-   this->lMainTitle->Visible = false;
-   this->StepBack = 0;
-   this->GamedDone = 0;
-   this->HintLoop = 0;
-   this->SelectedTile = NULL;
-
    Randomize();
    GameNo = Random(32767);
-   this->Caption = "Taipei Game  #" + IntToStr(GameNo);
 
-   this->BuildStructure(this->Mode);
-   this->FillStructure(GameNo);
-   this->Repaint();
+   this->InitGame(GameNo);
 }
 //---------------------------------------------------------------------------
 
@@ -313,23 +321,29 @@ void __fastcall TfTaipei::mSelectClick(TObject *Sender)
       if (GameNo < 0)
          GameNo = (65536 + GameNo);
       
-      this->tAutoPlay->Enabled = false;
-      this->mAutoPlay->Checked = false;
-      this->iMainLogo->Visible = false;
-      this->lMainTitleShadow->Visible = false;
-      this->lMainTitle->Visible = false;
-      this->StepBack = 0;
-      this->HintLoop = 0;
-      this->GamedDone = 0;
-      this->SelectedTile = NULL;
-
-      this->Caption = "Taipei Game  #" + IntToStr(GameNo);
-
-      this->BuildStructure(this->Mode);
-      this->FillStructure(GameNo);
-      this->Repaint();
+      this->InitGame(GameNo);
    }
    delete fSelectGame;
+}
+//---------------------------------------------------------------------------
+
+void TfTaipei::InitGame(int pGameNo)
+{
+   this->tAutoPlay->Enabled = false;
+   this->mAutoPlay->Checked = false;
+   this->iMainLogo->Visible = false;
+   this->lMainTitleShadow->Visible = false;
+   this->lMainTitle->Visible = false;
+   this->StepBack = 0;
+   this->GamedDone = 0;
+   this->HintLoop = 0;
+   this->SelectedTile = NULL;
+   this->GameNumber = pGameNo;
+   this->Caption = "Taipei Game  #" + IntToStr(pGameNo);
+
+   this->BuildStructure(this->Mode);
+   this->FillStructure(pGameNo);
+   this->Repaint();
 }
 //---------------------------------------------------------------------------
 
@@ -521,6 +535,7 @@ void __fastcall TfTaipei::FormMouseMove(TObject *Sender, TShiftState Shift,
    Pos.x = X;
    Pos.y = Y;
 
+   this->EditLayer > 0;
    CurrentTile = this->GetTile(Pos);
    if (CurrentTile != NULL) {
       this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":" + IntToStr(CurrentTile->Hint);
@@ -697,16 +712,11 @@ void __fastcall TfTaipei::Invert(Graphics::TBitmap *pBitmap)
 }
 //---------------------------------------------------------------------------
 
-void TfTaipei::DrawTile(int pId, bool pSel, int pX, int pY, int pZ, bool pNotch, int pDebug)
+void TfTaipei::DrawTile(int pId, bool pSel, int pRealX, int pRealY, bool pNotch, int pDebug)
 {
-   int RealX = (pX * HALFTILESIZE) + 8; // 8 = Global Top Offset
-   int RealY = (pY * HALFTILESIZE) + 6; // 6 = Global Left Offset
    TPoint LeftSide[4];
    TPoint LowerSide[4];
-   Graphics::TBitmap * TileGraph = new Graphics::TBitmap;
-
-   RealX = RealX + (pZ * TILEXOFFSET);
-   RealY = RealY - (pZ * TILEYOFFSET);
+   Graphics::TBitmap * TileGraph;
 
    this->Canvas->Pen->Color = clBlack;
 
@@ -720,45 +730,42 @@ void TfTaipei::DrawTile(int pId, bool pSel, int pX, int pY, int pZ, bool pNotch,
       }
    } else {
       //Normal Mode
-      switch(this->Shade) {
-         case 0 : this->Canvas->Brush->Color = clBlack;
-            break;
-         case 1 : this->Canvas->Brush->Color = (TColor) 4210752;
-            break;
-         case 2 : this->Canvas->Brush->Color = clGray; //clDkGray
-            break;
-         case 3 : this->Canvas->Brush->Color = clLtGray; //clSilver
-            break;
-         case 4 : this->Canvas->Brush->Color = clWhite;
-            break;
+      if (this->Shade == 4)
+         this->Canvas->Brush->Color = clGray; //clDkGray or 0x808080 or 8421504
+      else {
+         this->Canvas->Brush->Color = (TColor)(((this->Shade * 0x1F)) +         //R
+                                               ((this->Shade * 0x1F) * 256 ) +  //V
+                                               ((this->Shade * 0x1F) * 65536)); //B  //0x1F = 31
       }
    }
 
-   LeftSide[0] = Point(RealX, RealY); //Upper Left Corner (Top)
-   LeftSide[1] = Point(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
-   LeftSide[2] = Point(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
-   LeftSide[3] = Point(RealX - TILEXOFFSET, RealY + TILEYOFFSET); //Upper Left Corner (Bottom)
+   LeftSide[0] = Point(pRealX, pRealY); //Upper Left Corner (Top)
+   LeftSide[1] = Point(pRealX , pRealY + TILESIZE - 1); //Lower Left Corner (Top)
+   LeftSide[2] = Point(pRealX - TILEXOFFSET, pRealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
+   LeftSide[3] = Point(pRealX - TILEXOFFSET, pRealY + TILEYOFFSET); //Upper Left Corner (Bottom)
    this->Canvas->Polygon(LeftSide, 3);
 
    if (pNotch) {
-   LowerSide[0] = Point(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
-      LowerSide[1] = Point(RealX + HALFTILESIZE - 1, RealY + TILESIZE - 1); //Lower Right Corner (Top)
-      LowerSide[2] = Point(RealX - TILEXOFFSET + HALFTILESIZE - 1, RealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
-      LowerSide[3] = Point(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
+      LowerSide[0] = Point(pRealX , pRealY + TILESIZE - 1); //Lower Left Corner (Top)
+      LowerSide[1] = Point(pRealX + HALFTILESIZE - 1, pRealY + TILESIZE - 1); //Lower Right Corner (Top)
+      LowerSide[2] = Point(pRealX - TILEXOFFSET + HALFTILESIZE - 1, pRealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
+      LowerSide[3] = Point(pRealX - TILEXOFFSET, pRealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
       this->Canvas->Polygon(LowerSide, 3);
    } else {
-      LowerSide[0] = Point(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
-      LowerSide[1] = Point(RealX + TILESIZE - 1, RealY + TILESIZE - 1); //Lower Right Corner (Top)
-      LowerSide[2] = Point(RealX - TILEXOFFSET + TILESIZE - 1, RealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
-      LowerSide[3] = Point(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
+      LowerSide[0] = Point(pRealX , pRealY + TILESIZE - 1); //Lower Left Corner (Top)
+      LowerSide[1] = Point(pRealX + TILESIZE - 1, pRealY + TILESIZE - 1); //Lower Right Corner (Top)
+      LowerSide[2] = Point(pRealX - TILEXOFFSET + TILESIZE - 1, pRealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
+      LowerSide[3] = Point(pRealX - TILEXOFFSET, pRealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
       this->Canvas->Polygon(LowerSide, 3);
    }
 
    if (pDebug > 0) { //Debug color mode
-      this->Canvas->Rectangle(RealX, RealY, RealX + TILESIZE, RealY + TILESIZE); //Top Face
+      this->Canvas->Rectangle(pRealX, pRealY, pRealX + TILESIZE, pRealY + TILESIZE); //Top Face
    } else {
+      TileGraph = new Graphics::TBitmap;
+
       this->Canvas->Brush->Color = clWhite;
-      this->Canvas->Rectangle(RealX, RealY, RealX + TILESIZE, RealY + TILESIZE); //Top Face
+      this->Canvas->Rectangle(pRealX, pRealY, pRealX + TILESIZE, pRealY + TILESIZE); //Top Face
 
       if (this->mColor->Checked)
          this->mlTiles->GetBitmap(pId, TileGraph);
@@ -768,7 +775,7 @@ void TfTaipei::DrawTile(int pId, bool pSel, int pX, int pY, int pZ, bool pNotch,
       if(pSel)
          this->Invert(TileGraph);
 
-      this->Canvas->Draw(RealX, RealY, TileGraph);
+      this->Canvas->Draw(pRealX, pRealY, TileGraph);
 
       delete TileGraph;
    }
@@ -784,41 +791,53 @@ void TfTaipei::DrawAllTiles(void)
    TTile* CurrentTile;
    TTile* NotchTile;
    bool IndNotch;
+   int RealX, RealY;
    CurrentTile = this->TileList;
 
    while(CurrentTile != NULL) {
+      RealX = (CurrentTile->X * HALFTILESIZE) + 8 + (CurrentTile->Z * TILEXOFFSET); // 8 = Global Top Offset
+      RealY = (CurrentTile->Y * HALFTILESIZE) + 6 - (CurrentTile->Z * TILEYOFFSET); // 6 = Global Left Offset
+
       if (CurrentTile->Visible || CurrentTile->Debug) {
+         //Solide Mode (Polygon)
          NotchTile = this->GetTile(CurrentTile->X + 1, CurrentTile->Y + 2, CurrentTile->Z, true, true);
          if (NotchTile != NULL)
             IndNotch = NotchTile->Visible;
          else
             IndNotch = false;
 
-         this->DrawTile(CurrentTile->Graph, CurrentTile->Selected, CurrentTile->X, CurrentTile->Y, CurrentTile->Z,
-                        IndNotch, CurrentTile->Debug);
-      } else {
-         //Debug WireFrame Mode
-         if (this->DebugDraw) {
-            int RealX = (CurrentTile->X * HALFTILESIZE) + 8 + (CurrentTile->Z * TILEXOFFSET); // 8 = Global Top Offset
-            int RealY = (CurrentTile->Y * HALFTILESIZE) + 6 - (CurrentTile->Z * TILEYOFFSET); // 6 = Global Left Offset
-            //Left Side
-            this->Canvas->MoveTo(RealX, RealY); //Upper Left Corner (Top)
-            this->Canvas->LineTo(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
-            this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
-            this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET); //Upper Left Corner (Bottom)
-            this->Canvas->LineTo(RealX, RealY); //Upper Left Corner (Top)
-            //LowerSide
-            this->Canvas->MoveTo(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
-            this->Canvas->LineTo(RealX + TILESIZE - 1, RealY + TILESIZE - 1); //Lower Right Corner (Top)
+         this->DrawTile(CurrentTile->Graph, CurrentTile->Selected, RealX, RealY, IndNotch, CurrentTile->Debug);
+      } else if (CurrentTile->WireFrame || this->DebugDraw) {
+         //WireFrame Mode (LineTo)
+         if (CurrentTile->WireFrame)
+            this->Canvas->Pen->Color = clPurple;
+         else
+            this->Canvas->Pen->Color = clBlack;
+
+         //Left Side
+         this->Canvas->MoveTo(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
+         this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
+         this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET); //Upper Left Corner (Bottom)
+         this->Canvas->LineTo(RealX, RealY); //Upper Left Corner (Top)
+         //LowerSide
+         this->Canvas->MoveTo(RealX + TILESIZE - 1, RealY + TILESIZE - 1); //Lower Right Corner (Top)
+         this->Canvas->LineTo(RealX - TILEXOFFSET + TILESIZE - 1, RealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
+         this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
+         this->Canvas->LineTo(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
+         //Top
+         this->Canvas->MoveTo(RealX, RealY);
+         this->Canvas->LineTo(RealX + TILESIZE, RealY);
+         this->Canvas->LineTo(RealX + TILESIZE, RealY + TILESIZE);
+         this->Canvas->LineTo(RealX, RealY + TILESIZE);
+         this->Canvas->LineTo(RealX, RealY);
+
+         //UnderSide (back and right)
+         if (CurrentTile->WireFrame) {
+            this->Canvas->MoveTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET); //Upper Left Corner (Bottom)
+            this->Canvas->LineTo(RealX - TILEXOFFSET + TILESIZE, RealY + TILEYOFFSET); //Upper Right Corner (Bottom)
+            this->Canvas->LineTo(RealX + TILESIZE, RealY); //Upper Right Corner (Top)
+            this->Canvas->MoveTo(RealX - TILEXOFFSET + TILESIZE, RealY + TILEYOFFSET); //Upper Right Corner (Bottom)
             this->Canvas->LineTo(RealX - TILEXOFFSET + TILESIZE - 1, RealY + TILEYOFFSET + TILESIZE); //Lower Right Corner (Bottom)
-            this->Canvas->LineTo(RealX - TILEXOFFSET, RealY + TILEYOFFSET + TILESIZE); //Lower Left Corner (Bottom)
-            this->Canvas->LineTo(RealX , RealY + TILESIZE - 1); //Lower Left Corner (Top)
-            //Top
-            this->Canvas->MoveTo(RealX, RealY);
-            this->Canvas->LineTo(RealX + TILESIZE, RealY);
-            this->Canvas->LineTo(RealX + TILESIZE, RealY + TILESIZE);
-            this->Canvas->LineTo(RealX, RealY + TILESIZE);
-            this->Canvas->LineTo(RealX, RealY);
          }
       }
 
@@ -968,7 +987,7 @@ bool TfTaipei::IsTileFree(TTile* pTile)
 void TfTaipei::BuildStructure(int pMode)
 {
    TTile* NextTile;
-   int IdCmp = 144;
+   int IdCmp = 1;
    int i, j = 0;
    int x, y;
    bool Buffer[GAMEWIDTH][GAMEHEIGHT];
@@ -1142,7 +1161,7 @@ void TfTaipei::BuildStructure(int pMode)
                   NextTile = new TTile(IdCmp, x, y, i);
                   NextTile->Next = this->TileList;
                   this->TileList = NextTile;
-                  IdCmp--;
+                  IdCmp++;
                }
             }
          }
@@ -1178,6 +1197,7 @@ void TfTaipei::FillStructure(int pSeed)
          this->TileType[Target] = Swap;
       }
    }
+
    //Shuffle special types arrays
    for (int k=3; k>0; k--) {
       Target = Random(k);
@@ -1398,7 +1418,204 @@ void TfTaipei::AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, i
 }
 //---------------------------------------------------------------------------
 
+void __fastcall TfTaipei::mSaveClick(TObject *Sender)
+{
+   TTile* CurrentTile;
+   AnsiString GameType = this->mLayout->Items[this->Mode]->Caption;
 
+   GameType = StringReplace(GameType, "&", "", TReplaceFlags() << rfReplaceAll);
+   this->GameSaveDialog->Title = GameType + " #" + IntToStr(this->GameNumber);
+   this->GameSaveDialog->FileName = "Taipei_Game_" + GameType + "_" + IntToStr(this->GameNumber);
+
+   if (this->TileList != NULL && this->GameSaveDialog->Execute() == true)
+   {
+      _di_IXMLDocument XmlRoot = NewXMLDocument();
+      XmlRoot->Options = TXMLDocOptions() << doNodeAutoIndent;
+
+      _di_IXMLNode Game = XmlRoot->CreateElement("Game", "");
+      XmlRoot->ChildNodes->Add(Game);
+      Game->SetAttribute("Name", (AnsiString)"Taipei");
+
+        _di_IXMLNode Param = XmlRoot->CreateElement("Param", "");
+        Game->ChildNodes->Add(Param);
+        Param->SetAttribute("LayoutType", (AnsiString)GameType);
+        Param->SetAttribute("GameNumber", (int)this->GameNumber);
+        Param->SetAttribute("StepBack", (int)this->StepBack);
+
+          _di_IXMLNode SelTile = XmlRoot->CreateElement("SelectedTile", "");
+          Param->ChildNodes->Add(SelTile);
+          if (this->SelectedTile != NULL)
+              SelTile->Text = IntToStr(this->SelectedTile->Id);
+
+        _di_IXMLNode TileState = XmlRoot->CreateElement("TileState", "");
+        Game->ChildNodes->Add(TileState);
+        TileState->SetAttribute("TileCount", (int)this->TileList->Id);
+
+        _di_IXMLNode Tile;
+        _di_IXMLNode VisTile;
+        CurrentTile = this->TileList;
+        while(CurrentTile != NULL) {
+           Tile = XmlRoot->CreateElement("Tile", "");
+           TileState->ChildNodes->Add(Tile);
+           Tile->SetAttribute("ID", (int)CurrentTile->Id);
+
+             VisTile = XmlRoot->CreateElement("Visible", "");
+             Tile->ChildNodes->Add(VisTile);
+             if(CurrentTile->Visible == true)
+                VisTile->Text = "True";
+             else
+                VisTile->Text = "False";
+
+           CurrentTile = CurrentTile->Next;
+        }
+      XmlRoot->SaveToFile(this->GameSaveDialog->FileName);
+   }
+}
+//---------------------------------------------------------------------------
+/*
+<?xml version="1.0"?>
+<Game Name="Taipei">
+  <Param LayoutType="Cube" GameNumber="18215" StepBack="31">
+    <SelectedTile>34</SelectedTile>
+  </Param>
+  <TileState TileCount="124">
+    <Tile ID="124">
+      <Visible>True</Visible>
+    </Tile>
+<!--[...]-->
+  </TileState>
+</Game>
+*/
 //---------------------------------------------------------------------------
 
+void __fastcall TfTaipei::mLoadClick(TObject *Sender)
+{
+   TTile* CurrentTile;
+   AnsiString LayoutType, GameName, Visible;
+   int GameNo, Step, SelTile, TileCount, ID;
+
+   if (this->GameOpenDialog->Execute() == true) {
+      try
+      {
+         this->XMLDoc->FileName = this->GameOpenDialog->FileName;
+         this->XMLDoc->Active = true;
+         _di_IXMLNode XmlRoot = XMLDoc->DocumentElement;
+         _di_IXMLNode Param = XmlRoot->ChildNodes->Nodes[0];
+         GameName = XmlRoot->GetAttribute("Name");
+         if (GameName == "Taipei") {
+            _di_IXMLNode Param = XmlRoot->ChildNodes->Nodes[0];
+            LayoutType = Param->GetAttribute("LayoutType");
+            GameNo = Param->GetAttribute("GameNumber");
+            Step = Param->GetAttribute("StepBack");
+
+            this->Mode = this->mLayout->Find(LayoutType)->Tag;
+            this->InitGame(GameNo);
+            this->StepBack = Step;
+
+            if (Param->ChildNodes->Nodes[0]->IsTextElement)
+              SelTile = StrToInt(Param->ChildNodes->Nodes[0]->Text);
+            else
+              SelTile = -1;
+
+            _di_IXMLNode TileState = XmlRoot->ChildNodes->Nodes[1];
+            TileCount = StrToInt(TileState->GetAttribute("TileCount"));
+
+            CurrentTile = this->TileList;
+            _di_IXMLNodeList TileList = TileState->ChildNodes;
+            if (TileCount != TileList->Count)
+               throw;
+
+            for(int i = 0; i < TileList->Count; i++) {
+               ID = TileList->Get(i)->GetAttribute("ID");
+               Visible = TileList->Get(i)->ChildNodes->Nodes[0]->Text;
+
+               if (CurrentTile != NULL && CurrentTile->Id != ID) {
+                  CurrentTile = this->TileList;
+                  while(CurrentTile != NULL && CurrentTile->Id != ID) {
+                     CurrentTile = CurrentTile->Next;
+                  }
+               }
+               if (CurrentTile == NULL || CurrentTile->Id != ID)
+                  throw;
+
+               if (CurrentTile->Id == SelTile) {
+                  CurrentTile->Selected = true;
+                  this->SelectedTile = CurrentTile;
+               }
+               CurrentTile->Visible = UpperCase(Visible) == "TRUE";
+               CurrentTile = CurrentTile->Next;
+            }
+         }
+         this->XMLDoc->Active = false;
+      }
+      catch (Exception &E)
+      {
+         Application->MessageBox("Invalid File", "Taipei", MB_OK | MB_ICONINFORMATION);
+      }
+
+      this->Repaint();
+   }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mCreateClick(TObject *Sender)
+{
+   //Now what ?!
+   //ShowMessage("Not Yet!");
+   this->Menu = mMainLayout;
+   this->lNbTileLayout->Visible = true;
+   this->mLayerClick(this->mLayer1);
+   this->EditLayer = 1;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mExitLayoutClick(TObject *Sender)
+{
+   this->EditLayer = 0;
+   this->lNbTileLayout->Visible = false;
+   this->Menu = mMenu;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mPlayClick(TObject *Sender)
+{
+   //Now what ?!
+   ShowMessage("Not Yet!");
+   //LayoutOpenDialog
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mLayerClick(TObject *Sender)
+{
+   this->mLayer7->Checked = false;
+   this->mLayer6->Checked = false;
+   this->mLayer5->Checked = false;
+   this->mLayer4->Checked = false;
+   this->mLayer3->Checked = false;
+   this->mLayer2->Checked = false;
+   this->mLayer1->Checked = false;
+
+   TMenuItem *Current = (TMenuItem *)Sender;
+   Current->Checked = true;
+
+   this->EditLayer = Current->Tag;
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TfTaipei::mEditLayoutClick(TObject *Sender)
+{
+   //Now what ?!
+   ShowMessage("Not Yet!");
+   //LayoutOpenDialog
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfTaipei::mSaveLayoutClick(TObject *Sender)
+{
+   //Now what ?!
+   ShowMessage("Not Yet!");
+   //LayoutSaveDialog
+}
+//---------------------------------------------------------------------------
 

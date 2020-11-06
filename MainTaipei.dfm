@@ -47,7 +47,6 @@ object fTaipei: TfTaipei
   OnMouseDown = FormMouseDown
   OnMouseMove = FormMouseMove
   OnPaint = FormPaint
-  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object iMainLogo: TImage
@@ -824,7 +823,49 @@ object fTaipei: TfTaipei
     ParentFont = False
     Visible = False
   end
+  object lNbTileLayout: TLabel
+    Left = 8
+    Top = 8
+    Width = 41
+    Height = 13
+    Caption = '0'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = [fsBold]
+    ParentFont = False
+    Visible = False
+  end
   object mMenu: TMainMenu
+    Left = 72
+    Top = 8
+    object mFile: TMenuItem
+      Caption = 'File'
+      Visible = False
+      object mSave: TMenuItem
+        Caption = 'Save Game'
+        OnClick = mSaveClick
+      end
+      object mLoad: TMenuItem
+        Caption = 'Load Game'
+        OnClick = mLoadClick
+      end
+      object N5: TMenuItem
+        Caption = '-'
+        Visible = False
+      end
+      object mCreate: TMenuItem
+        Caption = 'Create Layout'
+        Visible = False
+        OnClick = mCreateClick
+      end
+      object mPlay: TMenuItem
+        Caption = 'Play Layout'
+        Visible = False
+        OnClick = mPlayClick
+      end
+    end
     object mGame: TMenuItem
       Caption = '&Game'
       object mNew: TMenuItem
@@ -921,6 +962,10 @@ object fTaipei: TfTaipei
     end
     object mLayout: TMenuItem
       Caption = '&Layout'
+      object mDebug: TMenuItem
+        Caption = 'Debug'
+        Visible = False
+      end
       object mStandard: TMenuItem
         Tag = 1
         Caption = 'Standard'
@@ -987,7 +1032,8 @@ object fTaipei: TfTaipei
     Height = 36
     Masked = False
     Width = 36
-    Left = 32
+    Left = 40
+    Top = 8
     Bitmap = {
       494C01012C003100040024002400FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       000000000000360000002800000090000000D40100000100200000000000001D
@@ -9713,20 +9759,22 @@ object fTaipei: TfTaipei
       00000000000000000000000000000000000000000000}
   end
   object XPManifest1: TXPManifest
-    Left = 64
+    Left = 8
+    Top = 8
   end
   object tAutoPlay: TTimer
     Enabled = False
     Interval = 2500
     OnTimer = tAutoPlayTimer
-    Left = 96
+    Left = 72
+    Top = 40
   end
   object mlTilesBW: TImageList
     Height = 36
     Masked = False
     Width = 36
-    Left = 32
-    Top = 32
+    Left = 40
+    Top = 40
     Bitmap = {
       494C01012C003100040024002400FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       000000000000360000002800000090000000D40100000100200000000000001D
@@ -18450,5 +18498,97 @@ object fTaipei: TfTaipei
       FCE600007FFFFFFFE7FFFFFFFE7FFFFFFFE7FFFFFFFE00007FFFFFFFE7FFFFFF
       FE7FFFFFFFE7FFFFFFFE00000000000000000000000000000000000000000000
       00000000000000000000000000000000000000000000}
+  end
+  object XMLDoc: TXMLDocument
+    NodeIndentStr = '   '
+    Options = [doNodeAutoCreate, doNodeAutoIndent, doAttrNull, doAutoPrefix, doNamespaceDecl]
+    Left = 504
+    Top = 8
+    DOMVendorDesc = 'MSXML'
+  end
+  object GameSaveDialog: TSaveDialog
+    DefaultExt = '.tpg'
+    Filter = 'Taipei Game File|*.tpg'
+    Options = [ofHideReadOnly, ofPathMustExist, ofEnableSizing]
+    Left = 504
+    Top = 40
+  end
+  object GameOpenDialog: TOpenDialog
+    DefaultExt = '.tpg'
+    Filter = 'Taipei Game File|*.tpg'
+    Options = [ofHideReadOnly, ofPathMustExist, ofFileMustExist, ofEnableSizing]
+    Left = 504
+    Top = 72
+  end
+  object LayoutSaveDialog: TSaveDialog
+    DefaultExt = '.tpl'
+    Filter = 'Taipei Game File|*.tpl'
+    Options = [ofHideReadOnly, ofPathMustExist, ofEnableSizing]
+    Left = 536
+    Top = 40
+  end
+  object LayoutOpenDialog: TOpenDialog
+    DefaultExt = '.tpl'
+    Filter = 'Taipei Game File|*.tpl'
+    Options = [ofHideReadOnly, ofPathMustExist, ofFileMustExist, ofEnableSizing]
+    Left = 536
+    Top = 72
+  end
+  object mMainLayout: TMainMenu
+    Left = 536
+    Top = 8
+    object mCreateLayout: TMenuItem
+      Caption = '&File'
+      object mEditLayout: TMenuItem
+        Caption = 'Edit Layout'
+        OnClick = mEditLayoutClick
+      end
+      object mSaveLayout: TMenuItem
+        Caption = '&Save Layout'
+        OnClick = mSaveLayoutClick
+      end
+      object mExitLayout: TMenuItem
+        Caption = '&Return'
+        OnClick = mExitLayoutClick
+      end
+    end
+    object mLayer: TMenuItem
+      Caption = '&Layer'
+      object mLayer7: TMenuItem
+        Tag = 7
+        Caption = '&7 (Top)'
+        OnClick = mLayerClick
+      end
+      object mLayer6: TMenuItem
+        Tag = 6
+        Caption = '&6'
+        OnClick = mLayerClick
+      end
+      object mLayer5: TMenuItem
+        Tag = 5
+        Caption = '&5'
+        OnClick = mLayerClick
+      end
+      object mLayer4: TMenuItem
+        Tag = 4
+        Caption = '&4'
+        OnClick = mLayerClick
+      end
+      object mLayer3: TMenuItem
+        Tag = 3
+        Caption = '&3'
+        OnClick = mLayerClick
+      end
+      object mLayer2: TMenuItem
+        Tag = 2
+        Caption = '&2'
+        OnClick = mLayerClick
+      end
+      object mLayer1: TMenuItem
+        Tag = 1
+        Caption = '&1 (Bottom)'
+        OnClick = mLayerClick
+      end
+    end
   end
 end
