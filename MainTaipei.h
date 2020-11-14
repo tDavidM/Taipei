@@ -65,11 +65,13 @@ const AnsiString gCongrat[CONGRATSIZE] = {
 };
 //---------------------------------------------------------------------------
 
+//Hard coded layouts, one array per layer L0 to L6 plus Size array
+
 //number of tiles per layers { L0, L1, L2, L3, L4, L5, L6 }
 const int DEBUGSIZE[7] = {29, 9, 0, 0, 0, 0, 0};
 
-//Layer L6 down to L0 {X,Y,  X,Y,  X,Y,  X,Y,  X,Y}
-//Where X low to high -> and Y low to high \/
+//Layer L0 up to L6 {X,Y,  X,Y,  X,Y,  X,Y,  X,Y}
+//  where X low to high -> and Y low to high \/
 const int DEBUGL0[29*2] = {                      17,4,
             4,6,  6,6,  8,6,  10,6,  12,6,    16,6, 18,6,     22,6,
                                                          20,7,
@@ -83,7 +85,7 @@ const int DEBUGL1[9*2] = {                       17,7,
                5,10, 7,10,  9,10, 11,10 };
 //---------------------------------------------------------------------------
 
-const int STANDARDSIZE[7] = {63, 46, 19, 10, 3, 2, 1}; //144
+const int STANDARDSIZE[7] = {63, 46, 19, 10, 3, 2, 1}; //144 tiles in total
 
 const int STANDARDL0[63*2] = {      10,1,  12,1,  14,1,  16,1,  18,1,
                       5,2,  7,2,                                         21,2,  23,2,
@@ -125,7 +127,7 @@ const int STANDARDL5[2*2]  = {               13,7,   15,7   };
 const int STANDARDL6[1*2]  = {                    14,7        };
 //---------------------------------------------------------------------------
 
-const int BRIDGESIZE[7] = {24, 20, 24, 32, 16, 14, 2}; //132
+const int BRIDGESIZE[7] = {24, 20, 24, 32, 16, 14, 2}; //132 tiles in total
 
 const int BRIDGEL0[24*2] = {3,4,  5,4,  7,4,                                           21,4,  23,4,  25,4,
                             3,6,  5,6,  7,6,                                           21,6,  23,6,  25,6,
@@ -163,7 +165,7 @@ const int BRIDGEL6[2*2]  = {                                   14,4,
                                                                14,10};
 //---------------------------------------------------------------------------
 
-const int CASTLESIZE[7] = {34, 34, 36, 28, 12, 0, 0}; //144
+const int CASTLESIZE[7] = {34, 34, 36, 28, 12, 0, 0}; //144 tiles in total
 
 const int CASTLEL0[34*2] = {6,1,  8,1,  10,1,  12,1,         16,1,  18,1,  20,1,  22,1,
                             6,3,                                                  22,3,
@@ -206,7 +208,7 @@ const int CASTLEL4[12*2] = {6,1,                      14,1,                     
                             6,13,                     14,13,                      22,13};
 //---------------------------------------------------------------------------
 
-const int CUBESIZE[7] = {25, 25, 24, 25, 25, 0, 0}; //124
+const int CUBESIZE[7] = {25, 25, 24, 25, 25, 0, 0}; //124 tiles in total
 
 const int CUBEL0[25*2] = {10,3,  12,3,  14,3,  16,3,  18,3,
                           10,5,  12,5,  14,5,  16,5,  18,5,
@@ -235,7 +237,7 @@ const int CUBEL4[25*2] = {10,3,  12,3,  14,3,  16,3,  18,3,
                           10,11, 12,11, 14,11, 16,11, 18,11};
 //---------------------------------------------------------------------------
 
-const int GLYPHSIZE[7] = {43, 43, 43, 9, 3, 1, 0}; //142
+const int GLYPHSIZE[7] = {43, 43, 43, 9, 3, 1, 0}; //142 tiles in total
 
 const int GLYPHL0[43*2] = {6,1,  8,1,  10,1,        14,1,         18,1,  20,1,  22,1,
                                        10,3,        14,3,         18,3,
@@ -274,7 +276,7 @@ const int GLYPHL4[3*2]  = {                         14,5,
 const int GLYPHL5[1*2]  = {                         14,7  };
 //---------------------------------------------------------------------------
 
-const int PYRAMIDSIZE[7] = {49, 36, 25, 16, 8, 4, 0}; //138
+const int PYRAMIDSIZE[7] = {49, 36, 25, 16, 8, 4, 0}; //138 tiles in total
 const int PYRAMIDL0[49*2] = {8,1,  10,1,  12,1,  14,1,  16,1,  18,1,  20,1,
                              8,3,  10,3,  12,3,  14,3,  16,3,  18,3,  20,3,
                              8,5,  10,5,  12,5,  14,5,  16,5,  18,5,  20,5,
@@ -304,7 +306,7 @@ const int PYRAMIDL5[4*2]  = {                 13,6,  15,6,
                                               13,8,  15,8};
 //---------------------------------------------------------------------------
 
-const int SPIRALSIZE[7] = {54, 34, 18, 4, 4, 0, 0}; //114
+const int SPIRALSIZE[7] = {54, 34, 18, 4, 4, 0, 0}; //114 tiles in total
 const int SPIRALL0[54*2] = {  9,1,
                        7,2,                        15,2,  17,2,
                 5,3,                        13,3,
@@ -350,7 +352,7 @@ const int SPIRALL4[4*2]  = {                       15,6,
                                                 14,9  };
 //---------------------------------------------------------------------------
 
-const int DRAGONSIZE[7] = {87, 36, 16, 4, 1, 0, 0}; //144
+const int DRAGONSIZE[7] = {87, 36, 16, 4, 1, 0, 0}; //144 tiles in total
 const int DRAGONL0[87*2] = {
     2,0,  4,0,  6,0,  8,0,  10,0,  12,0,  14,0,  16,0,  18,0,  20,0,  22,0,  24,0,
                 6,2,  8,2,  10,2,  12,2,  14,2,  16,2,  18,2,  20,2,
@@ -379,24 +381,36 @@ const int DRAGONL4[1*2] = {            13,7 };
 
 //---------------------------------------------------------------------------
 
+//Object for a Tile
 class TTile
 {
 private:
-  int Dummy;
+  int Dummy;   // Not used
 public:
-  int Id;
-  TTile *Next;
+  int Id;      // Unique ID for each tiles, 0 to number of tiles
+               //   used by the AutoPlay algo and the Hint functionality as well as Save/Load game functionality
+  TTile *Next; // Pointer to the next entry in the chained list used to store tiles
 
-  int X, Y, Z;
-  int Type;
-  int Graph;
-  int Step;
-  int Hint;
-  int Debug;
+               // X, Y and Z coordinates for tiles draw and cursor interactions
+  int X, Y, Z; // X starts on the left side and increases horizontaly toward the right
+               // Y starts on the upper portion and increases verticaly toward the lower portion
+               // Z starts on the bottom layer and increases verticaly toward the top layer
+               // drawing is done win and isometric perspective with a "high-angle shot" plus a lateral offset
+               //
+               //   |\¯¯¯¯\    //
+               //   \ \____\   //
+               //    \|____|   //
 
-  bool Selected;
-  bool Visible;
-  bool WireFrame;
+  int Type;    // Value used to match tiles of the same type
+  int Graph;   // Image list index for graph used to draw tile
+  int Step;    // Indicate the order tiles were removed: starts at 0 and increases by 1 for each pair of tiles removed
+  int Hint;    // Indicate the order tiles were laid, starts at number of pairs and decreases by 1 to 0
+               //   used by the AutoPlay algo and the Hint functionality
+  int Debug;   // Debug indicator to toggle a tile visiable as a solid color: 1=blue 2=black
+
+  bool Selected;  // Selected tiles are drawn with an inverted color graph
+  bool Visible;   // Visible tiles are drawn with their corresponding Graph
+  bool WireFrame; // WireFrame tiles are drawn in ..well, wireframe :-)
 
   TTile(int pId, int pX, int pY, int pZ);
 };
@@ -406,8 +420,26 @@ public:
 class TfTaipei : public TForm
 {
 __published:
-   TMainMenu *mMenu;
+
+   TImageList *mlTiles;            //Stores all tile's graph (color)
+   TImageList *mlTilesBW;          //Stores all tile's graph (B&W)
+   TTimer *tAutoPlay;              //
+   TImage *iMainLogo;              //Main Taipei Logo image object
+   TLabel *lMainTitle;             //Main Logo/title text in white transparent
+   TLabel *lMainTitleShadow;       //Main Logo/title text in black with a few pixel offset to simulate a shadow
+   TLabel *lNbTileLayout;          //In Edit Mode, displays the current number of tile
+   TLabel *lDebug;                 //When Debug Mode is activated, displays the current tile ID and Hint value (tile under the cursor)
+   TXPManifest *XPManifest1;       //Improve the look of the form
+   TXMLDocument *XMLDoc;           //Used to read XML files
+   TSaveDialog *GameSaveDialog;    //Dialog used to save the current gamestate
+   TOpenDialog *GameOpenDialog;    //Dialog used to load a previously saved gamestate
+   TSaveDialog *LayoutSaveDialog;  //Dialog used to save the current edited/created custom game layout
+   TOpenDialog *LayoutOpenDialog;  //Dialog used to load and play a custom game layout
+
+   TMainMenu *mMenu;       //Menus items, wow, that's too long of a list to comment and it's fairly self-explanatory
    TMenuItem *mGame;
+   TMenuItem *mOptions;
+   TMenuItem *mMessages;
    TMenuItem *mLayout;
    TMenuItem *mHelp;
    TMenuItem *mAbout;
@@ -425,21 +457,11 @@ __published:
    TMenuItem *mGlyph;
    TMenuItem *mPyramid;
    TMenuItem *mSpiral;
-   TImageList *mlTiles;
-   TImage *iMainLogo;
-   TLabel *lMainTitleShadow;
-   TLabel *lMainTitle;
-   TMenuItem *mOptions;
-   TMenuItem *mMessages;
-   TXPManifest *XPManifest1;
-   TTimer *tAutoPlay;
-   TLabel *lDebug;
    TMenuItem *N1;
    TMenuItem *N2;
    TMenuItem *N3;
    TMenuItem *mColor;
    TMenuItem *mDragon;
-   TImageList *mlTilesBW;
    TMenuItem *mWatchBuilds;
    TMenuItem *N4;
    TMenuItem *mStrategy;
@@ -456,12 +478,6 @@ __published:
    TMenuItem *mCreate;
    TMenuItem *mPlay;
    TMenuItem *N5;
-   TXMLDocument *XMLDoc;
-   TSaveDialog *GameSaveDialog;
-   TOpenDialog *GameOpenDialog;
-   TMenuItem *mDebug;
-   TSaveDialog *LayoutSaveDialog;
-   TOpenDialog *LayoutOpenDialog;
    TMainMenu *mMainLayout;
    TMenuItem *mCreateLayout;
    TMenuItem *mSaveLayout;
@@ -474,78 +490,95 @@ __published:
    TMenuItem *mLayer3;
    TMenuItem *mLayer2;
    TMenuItem *mLayer1;
+   TMenuItem *mClear;
+   TMenuItem *N6;
+   TMenuItem *mTestLayout;
+   TMenuItem *mCustom;
    TMenuItem *mEditLayout;
-   TLabel *lNbTileLayout;
-   void __fastcall mExitClick(TObject *Sender);
-   void __fastcall FormCreate(TObject *Sender);
-   void __fastcall mMessagesClick(TObject *Sender);
-   void __fastcall mAboutClick(TObject *Sender);
-   void __fastcall mStartOverClick(TObject *Sender);
-   void __fastcall mBackupClick(TObject *Sender);
-   void __fastcall FormKeyDown(TObject *Sender, WORD &Key, TShiftState Shift);
-   void __fastcall mLayoutMenuClick(TObject *Sender);
-   void __fastcall mNewClick(TObject *Sender);
-   void __fastcall mSelectClick(TObject *Sender);
-   void __fastcall mHintClick(TObject *Sender);
-   void __fastcall mAutoPlayClick(TObject *Sender);
-   void __fastcall tAutoPlayTimer(TObject *Sender);
-   void __fastcall FormMouseMove(TObject *Sender, TShiftState Shift, int X,
-          int Y);
-   void __fastcall FormPaint(TObject *Sender);
-   void __fastcall FormMouseDown(TObject *Sender, TMouseButton Button,
-          TShiftState Shift, int X, int Y);
-   void __fastcall mColorClick(TObject *Sender);
-   void __fastcall mWatchBuildsClick(TObject *Sender);
-   void __fastcall mStrategyClick(TObject *Sender);
-   void __fastcall mHowtoPlayClick(TObject *Sender);
-   void __fastcall mDarkenClick(TObject *Sender);
-   void __fastcall mLightenClick(TObject *Sender);
-   void __fastcall mPeekClick(TObject *Sender);
-   void __fastcall mBeginnerClick(TObject *Sender);
-   void __fastcall mExpertClick(TObject *Sender);
-   void __fastcall mSaveClick(TObject *Sender);
-   void __fastcall mLoadClick(TObject *Sender);
-   void __fastcall mCreateClick(TObject *Sender);
-   void __fastcall mPlayClick(TObject *Sender);
-   void __fastcall mLayerClick(TObject *Sender);
-   void __fastcall mExitLayoutClick(TObject *Sender);
-   void __fastcall mEditLayoutClick(TObject *Sender);
-   void __fastcall mSaveLayoutClick(TObject *Sender);
+   TMenuItem *mDebug;
+
+   void __fastcall mExitClick(TObject *Sender);        //Called to close the application
+   void __fastcall FormCreate(TObject *Sender);        //Initialises form's default values and read command line call parameters
+   void __fastcall mMessagesClick(TObject *Sender);    //Toggles contextual help/reminder messages about gameplay
+   void __fastcall mColorClick(TObject *Sender);       //Toggles between color and black&white tile graphs
+   void __fastcall mWatchBuildsClick(TObject *Sender); //Toggles tile heap build animation
+   void __fastcall mAboutClick(TObject *Sender);       //Shows a system MessageBox with infos about Taipei
+   void __fastcall mHowtoPlayClick(TObject *Sender);   //Shows a system MessageBox with help to play the game
+   void __fastcall mStrategyClick(TObject *Sender);    //Shows a system MessageBox with strategies to play the game
+   void __fastcall mDarkenClick(TObject *Sender);      //Lowers the tile's eges brightness
+   void __fastcall mLightenClick(TObject *Sender);     //Increase the tile's eges brightness
+   void __fastcall mPeekClick(TObject *Sender);        //Toggles the Peek Mode used to temporarily remove any tile to have a look under
+   void __fastcall mBeginnerClick(TObject *Sender);    //Activates Beginner Mode where a pair of tiles will preferencialy be located within a limited distance when possible
+   void __fastcall mExpertClick(TObject *Sender);      //Activates Expert Mode where a pair of tiles have no bias on their relative random location
+   void __fastcall mLayoutMenuClick(TObject *Sender);  //Called by every entries in the Layout menu, sets the game Mode using the caller's Tag
+   void __fastcall mStartOverClick(TObject *Sender);   //Resets the current game back to start
+   void __fastcall mBackupClick(TObject *Sender);      //Revers the last move, can be called sequentially to cancel all moves back to start, cannot be undo
+   void __fastcall mNewClick(TObject *Sender);         //Calls to Initialize a new game (by calling InitGame() ) with a random seed
+   void __fastcall mSelectClick(TObject *Sender);      //Calls to Initialize a new game (by calling InitGame() ) with a seed provided by the user
+
+   void __fastcall mHintClick(TObject *Sender);        //suggests a pair of matching tiles from the available tiles at the current game state, can be called sequentially to show all matchs
+   void __fastcall mAutoPlayClick(TObject *Sender);    //Toggles the AutoPlay mode where the games plays a move every few seconds (see tAutoPlayTimer)
+   void __fastcall tAutoPlayTimer(TObject *Sender);    //Plays automaticly the best move from a given game state
+   void __fastcall FormKeyDown(TObject *Sender, WORD &Key, TShiftState Shift);  //Senses keystrokes used as shortcuts
+   void __fastcall FormMouseMove(TObject *Sender, TShiftState Shift, int X,     
+          int Y);                                                               //Senses cursor mouvements in the game area, primarily cursor over tile events
+   void __fastcall FormMouseDown(TObject *Sender, TMouseButton Button,          
+          TShiftState Shift, int X, int Y);            //Senses cursor clicks in the game area, primarily tile selection events
+   void __fastcall FormPaint(TObject *Sender);         //Calls tiles drawing procedures
+
+   void __fastcall mSaveClick(TObject *Sender);        //Saves a current game/layout state to a file
+   void __fastcall mLoadClick(TObject *Sender);        //Loads a file to retrive previously saved game/layout state
+   void __fastcall mCreateClick(TObject *Sender);      //Enters Edit Layout Mode where an user may create or edit a custom layout
+   void __fastcall mExitLayoutClick(TObject *Sender);  //Exits Edit Layout Mode without saving
+   
+   void __fastcall mLayerClick(TObject *Sender);       //Called by every entries in the Layer menu, sets the EditLayer using the caller's Tag
+   void __fastcall mPlayClick(TObject *Sender);        //Loads a custom layout from a file to be played
+   void __fastcall mEditLayoutClick(TObject *Sender);  //Loads a custom layout from a file to be edited
+   void __fastcall mSaveLayoutClick(TObject *Sender);  //Saves the current custom layout being edited/created to a file
+   void __fastcall mTestLayoutClick(TObject *Sender);  //Exits Edit Layout Mode and loads the current custom layout to be played
+   void __fastcall mClearClick(TObject *Sender);       //Clears the current custom layout being edited/created
 private:
-   int Mode;
-   int GameNumber;
-   int StepBack;
-   int GamedDone;
-   int HintLoop;
-   int TileType[72];
-   int SpecialGraph1[4];
-   int SpecialGraph2[4];
-   int Shade;
-   int Radius;
-   bool Peek;
-   bool DebugDraw;
-   int EditLayer;
+   int Mode;              //Indicated tile layout selected, 0=debug, 1t o 8= hard code layout and 99=custom
+   int GameNumber;        //Seed used to generate the game, 0 to 32766 ~ish
+                          //  the original had a stange "bug" replicated here, see mSelectClick
+   int StepBack;          //Number of steps taken, used to back/cancel a move
+   int GamedDone;         //Cheating prevention messure, a player must back at least 32 moves
+                          //  from a finished game to get a new "Winner'qus Fortune" message
+   int HintLoop;          //Used by the Hint functionality to keep track of which hint have been shown
+                          //  when calling Hint multiple time in a row
+   int TileType[72];      //Array used to generate 72 pairs for the 35 tiles types
+   int SpecialGraph1[4];  //Array used to generate 2 pairs of 4 Seasons tiles
+   int SpecialGraph2[4];  //Array used to generate 2 pairs of 4 Flowers tiles
+   int Shade;             //Shade used for the tiles edges Default=4(Gray) take value from 0 to 8 (9 position)
+   int Radius;            //Preferencial search distance (not circular tho) for tiles pairs placement
+                          //  Default=0(Expert)[no limit] and only one other possible value: 3=Beginner
+   bool Peek;             //Flag for Peek Mode where any visible tile can be "lifted" to reveal the tile(s) under
+   bool DebugDraw;        //Flag to make every invisible tiles drawn as wirefram and tiles pairs placement algo "verbose"
+   int EditLayer;         //Indicate which layer is been edited, Default=0(not in edit mode)[Normal Mode]
+                          //  and 1 to 7 for layer 0 to 6, ...yeah, I know D:
+   int EditTileCmp;       //Counter used in Edit Mode for the number of tiles in a layout
 
-   TTile* TileList;
-   TTile* SelectedTile;
+   TTile* TileList;       //Pointer to the first element/entry in the Linked List used to store tiles
+   TTile* SelectedTile;   //Pointer to the selected element/entry in the Linked List used to store tiles
 
-   void InitGame(int pGameNo);
+   void InitGame(int pGameNo); //Initializes a new game using a seed given in parameter and the currently selected game mode (layout)
 
-   void HideTileStep(TTile* pTile, bool pAutoPlay = false);
+   void HideTileStep(TTile* pTile, bool pAutoPlay = false); //Called when a tile is selected, if valid, it will select a tile or match with a selected tile and test if game is done
+   Byte __fastcall TfTaipei::CustomIntToByte(int pByte);    //Takes a int as parameters and returns its value as a Byte
+   void __fastcall Invert(Graphics::TBitmap *pBitmap);      //Inverts the RGB color values of a bitmap given in parameter
+   void DrawTile(int pId, bool pSel, int pRealX, int pRealY,
+                 bool pNotch = false, int pDebug = 0);      //Draws a tile with a graphic according to the given parameters (Called by DrawAllTiles )
+   void DrawAllTiles(void);                                 //Draws all visibles tiles on the game area as graphic or wireframe depending on requirements
+   TTile* GetTile(int pX, int pY, int pZ, bool pExactPos = true,
+                  bool pExactZ = true);                     //Locates a tile at a given grid/game coordinates with exact match or optional first match
+   TTile* GetTile(TPoint pRealPos, int pExactZ = -1);       //Locates a tile at a given form/pixel coordinates with exact match or optional first match
+   bool IsTileFree(TTile* pTile);                           //Tests if a tile can be played, not covered anywhere on top or locked on both sides
 
-   Byte __fastcall TfTaipei::CustomIntToByte(int pByte);
-   void __fastcall Invert(Graphics::TBitmap *pBitmap);
-   void DrawTile(int pId, bool pSel, int pRealX, int pRealY, bool pNotch = false, int pDebug = 0);
-   void DrawAllTiles(void);
-
-   TTile* GetTile(int pX, int pY, int pZ, bool pExactPos = true, bool pExactZ = true);
-   TTile* GetTile(TPoint pRealPos);
-   bool IsTileFree(TTile* pTile);
-
-   void BuildStructure(int pMode);
-   void FillStructure(int pSeed);
-   TTile* FindCandidate(TPoint pMinXY, TPoint pMaxXY);
-   void AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, int pDelta, int& pSpecGraph1, int& pSpecGraph2);
+   void BuildStructure(int pMode);                          //Build the linked list used to store a game layout from the hard coded arrays or cleanup a custom game layout
+   void FillStructure(int pSeed);                           //Sets the Type and Graphic in pairs on every tiles of the layout in a way that guarantees at least one solution
+   TTile* FindCandidate(TPoint pMinXY, TPoint pMaxXY);      //Finds a random tile in the layout that can be played/remove, it may fails to find any
+   void AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB,
+                        int pDelta, int& pSpecGraph1, int& pSpecGraph2); //Takes the basic Type and Graph values from FillStructure() to a tile and handles specials cases/tiles
 
 public:
    __fastcall TfTaipei(TComponent* Owner);

@@ -13,35 +13,44 @@
 #pragma resource "*.dfm"
 TfTaipei *fTaipei;
 
-#define TILESIZE       36
-#define HALFTILESIZE   18
-#define TILEXOFFSET    5
-#define TILEYOFFSET    3
-#define MAXNUMBERLAYER 7
-#define GAMEHEIGHT     17
-#define GAMEWIDTH      31
+#define TILESIZE       36  // Horizontal pixel width of a tile
+#define HALFTILESIZE   18  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
+#define TILEXOFFSET    5   // Pixel horizontal offset for the high-angle isometric perspective
+#define TILEYOFFSET    3   // Pixel vertical offset for the high-angle isometric perspective
+#define MAXNUMBERLAYER 7   // Theres only 7 layers
+#define GAMEWIDTH      31  // Horizontal width of the game grid
+#define GAMEHEIGHT     17  // Vertical height of the game grid
 
 //---------------------------------------------------------------------------
 
 //Constructor for a Tile
 TTile::TTile(int pId, int pX, int pY, int pZ)
 {
-   this->Id   = pId;
-   this->Next = NULL;
+   this->Id   = pId; // Unique ID for each tiles, 0 to number of tiles
+                     //   used by the AutoPlay algo and the Hint functionality as well as Save/Load game functionality
+   this->Next = NULL;// Pointer to the next entry in the Linked List used to store tiles
 
-   this->X = pX;
-   this->Y = pY;
-   this->Z = pZ;
+                     // X, Y and Z coordinates in the game grid (not Canvas X/Y) for tiles draw and cursor interactions
+                     // NOTE: a tile is a square with 2 units of width and height !!!
+   this->X = pX;     // X starts on the left side and increases horizontaly toward the right
+   this->Y = pY;     // Y starts on the upper portion and increases verticaly toward the lower portion
+   this->Z = pZ;     // Z starts on the bottom layer and increases verticaly toward the top layer
+                     // drawing is done win and isometric perspective with a "high-angle shot" with a lateral offset
+                     //
+                     //   |\¯¯¯¯\    //
+                     //   \ \____\   //
+                     //    \|____|   //
 
-   this->Type  = -1;
-   this->Graph = -1;
-   this->Step  = -1;
-   this->Hint  = -1;
-   this->Debug = 0;
+   this->Type  = -1; // Value used to match tiles of the same type
+   this->Graph = -1; // Image list index for graph used to draw tile
+   this->Step  = -1; // Indicate the order tiles were removed: starts at 0 and increases by 1 for each pair of tiles removed
+   this->Hint  = -1; // Indicate the order tiles were laid, starts at number of pairs and decreases by 1 to 0
+                     //   used by the AutoPlay algo and the Hint functionality
+   this->Debug = 0;  // Debug indicator to toggle a tile visiable as a solid color: 1=blue 2=black
 
-   this->Selected  = false;
-   this->Visible   = false;
-   this->WireFrame = false;
+   this->Selected  = false; // Selected tiles are drawn with an inverted color graph
+   this->Visible   = false; // Visible tiles are drawn with their corresponding Graph
+   this->WireFrame = false; // WireFrame tiles are drawn in ..well, wireframe :-)
 }
 
 //---------------------------------------------------------------------------
@@ -52,12 +61,14 @@ __fastcall TfTaipei::TfTaipei(TComponent* Owner)
 }
 //---------------------------------------------------------------------------
 
+//Called to close the application
 void __fastcall TfTaipei::mExitClick(TObject *Sender)
 {
    this->Close();
 }
 //---------------------------------------------------------------------------
 
+//Initialises form's default values and read command line call parameters
 void __fastcall TfTaipei::FormCreate(TObject *Sender)
 {
    this->DoubleBuffered = true;
@@ -71,6 +82,7 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
    this->Shade = 4;
    this->Radius = 0;
    this->Peek = false;
+   this->EditLayer = 0;
 
    this->TileList     = NULL;
    this->SelectedTile = NULL;
@@ -88,12 +100,14 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Toggles contextual help/reminder messages about gameplay
 void __fastcall TfTaipei::mMessagesClick(TObject *Sender)
 {
    this->mMessages->Checked = !this->mMessages->Checked;
 }
 //---------------------------------------------------------------------------
 
+//Toggles between color and black&white tile graphs
 void __fastcall TfTaipei::mColorClick(TObject *Sender)
 {
    this->mColor->Checked = !this->mColor->Checked;
@@ -101,12 +115,14 @@ void __fastcall TfTaipei::mColorClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Toggles tile heap build animation
 void __fastcall TfTaipei::mWatchBuildsClick(TObject *Sender)
 {
    this->mWatchBuilds->Checked = !this->mWatchBuilds->Checked;
 }
 //---------------------------------------------------------------------------
 
+//Shows a system MessageBox with infos about Taipei
 void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 {
    AnsiString DialogText = "Taipei !\n\nOriginal by Dave Norris\n"
@@ -123,6 +139,7 @@ void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 }
 //--------------------------------------------------------------------------
 
+//Shows a system MessageBox with help to play the game
 void __fastcall TfTaipei::mHowtoPlayClick(TObject *Sender)
 {
    AnsiString DialogText = "Taipei is a modern, solitaire version of the ancient oriental game, Mah-Jongg.\n\n"
@@ -138,6 +155,7 @@ void __fastcall TfTaipei::mHowtoPlayClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Shows a system MessageBox with strategies to play the game
 void __fastcall TfTaipei::mStrategyClick(TObject *Sender)
 {
    AnsiString DialogText = "Winning a game is much like solving an intricate puzzle.\n"
@@ -153,36 +171,7 @@ void __fastcall TfTaipei::mStrategyClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
-      TShiftState Shift)
-{
-   if(Key == 0x8 /*BackSpace*/)
-      this->mBackup->Click();
-
-   if (Key == 0x48 /*VK_KEY_H*/)
-      this->mHint->Click();
-
-   if (Key == 0x54 /*VK_KEY_H*/) {
-      this->mDragon->Visible      = true;
-      this->mWatchBuilds->Visible = true;
-      if (Shift.Contains(ssCtrl)) {
-         this->mLighten->Visible    = true;
-         this->mDarken->Visible     = true;
-         this->mDifficulty->Visible = true;
-         this->mPeek->Visible       = true;
-      }
-      if (Shift.Contains(ssShift)) {
-         this->mFile->Visible = true;
-      }
-      if (Shift.Contains(ssAlt)) {
-         this->N5->Visible      = true;
-         this->mCreate->Visible = true;
-         this->mPlay->Visible   = true;
-      }
-   }
-}
-//---------------------------------------------------------------------------
-
+//Lowers the tile's eges brightness
 void __fastcall TfTaipei::mDarkenClick(TObject *Sender)
 {
    if (this->Shade > 1)
@@ -192,6 +181,7 @@ void __fastcall TfTaipei::mDarkenClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Increase the tile's eges brightness
 void __fastcall TfTaipei::mLightenClick(TObject *Sender)
 {
    if (this->Shade < 8)
@@ -201,6 +191,7 @@ void __fastcall TfTaipei::mLightenClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Toggles the Peek Mode used to temporarily remove any tile to have a look under
 void __fastcall TfTaipei::mPeekClick(TObject *Sender)
 {
    this->Peek = !this->Peek;
@@ -208,6 +199,7 @@ void __fastcall TfTaipei::mPeekClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Activates Beginner Mode where a pair of tiles will preferencialy be located within a limited distance when possible
 void __fastcall TfTaipei::mBeginnerClick(TObject *Sender)
 {
    this->Radius = 3;
@@ -216,6 +208,7 @@ void __fastcall TfTaipei::mBeginnerClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Activates Expert Mode where a pair of tiles have no bias on their relative random location
 void __fastcall TfTaipei::mExpertClick(TObject *Sender)
 {
    this->Radius = 0;
@@ -224,6 +217,28 @@ void __fastcall TfTaipei::mExpertClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Called by every entries in the Layour menu, sets the game Mode using the caller's Tag
+void __fastcall TfTaipei::mLayoutMenuClick(TObject *Sender)
+{
+   this->mStandard->Checked = false;
+   this->mBridge->Checked   = false;
+   this->mCastle->Checked   = false;
+   this->mCube->Checked     = false;
+   this->mGlyph->Checked    = false;
+   this->mPyramid->Checked  = false;
+   this->mSpiral->Checked   = false;
+   this->mDragon->Checked   = false;
+   this->mCustom->Checked   = false;
+
+   TMenuItem *Current = (TMenuItem *)Sender;
+   Current->Checked = true;
+
+   this->Mode = Current->Tag;
+   this->mNewClick(NULL);
+}
+//---------------------------------------------------------------------------
+
+//Resets the current game back to start
 void __fastcall TfTaipei::mStartOverClick(TObject *Sender)
 {
    TTile* CurrentTile;
@@ -248,6 +263,7 @@ void __fastcall TfTaipei::mStartOverClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Revers the last move, can be called sequentially to cancel all moves back to start, cannot be undo
 void __fastcall TfTaipei::mBackupClick(TObject *Sender)
 {
    TTile* CurrentTile;
@@ -273,25 +289,7 @@ void __fastcall TfTaipei::mBackupClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-void __fastcall TfTaipei::mLayoutMenuClick(TObject *Sender)
-{
-   this->mStandard->Checked = false;
-   this->mBridge->Checked   = false;
-   this->mCastle->Checked   = false;
-   this->mCube->Checked     = false;
-   this->mGlyph->Checked    = false;
-   this->mPyramid->Checked  = false;
-   this->mSpiral->Checked   = false;
-   this->mDragon->Checked   = false;
-
-   TMenuItem *Current = (TMenuItem *)Sender;
-   Current->Checked = true;
-
-   this->Mode = Current->Tag;
-   this->mNewClick(NULL);
-}
-//---------------------------------------------------------------------------
-
+//Calls to Initialize a new game (by calling InitGame() ) with a random seed
 void __fastcall TfTaipei::mNewClick(TObject *Sender)
 {
    int GameNo;
@@ -303,6 +301,7 @@ void __fastcall TfTaipei::mNewClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Calls to Initialize a new game (by calling InitGame() ) with a seed provided by the user
 void __fastcall TfTaipei::mSelectClick(TObject *Sender)
 {
    int GameNo;
@@ -314,19 +313,23 @@ void __fastcall TfTaipei::mSelectClick(TObject *Sender)
       } catch(Exception& e) {
          GameNo = 0;
       }
+      //The original had a stange "bug" replicated here,
+      //  I belive the seed was stored in a short unsigned int while the prompt used a short signed int
+      //  out of bounds values where set to zero instead of wrapping around
       if (GameNo > 32767)
          GameNo = 0;
       if (GameNo < -32767)
          GameNo = 0;
       if (GameNo < 0)
          GameNo = (65536 + GameNo);
-      
+
       this->InitGame(GameNo);
    }
    delete fSelectGame;
 }
 //---------------------------------------------------------------------------
 
+//Initializes a new game using a seed given in parameter and the currently selected game mode (layout)
 void TfTaipei::InitGame(int pGameNo)
 {
    this->tAutoPlay->Enabled = false;
@@ -347,6 +350,7 @@ void TfTaipei::InitGame(int pGameNo)
 }
 //---------------------------------------------------------------------------
 
+//suggests a pair of matching tiles from the available tiles at the current game state, can be called sequentially to show all matchs
 void __fastcall TfTaipei::mHintClick(TObject *Sender)
 {
    TTile* CurrentTile;
@@ -441,6 +445,7 @@ void __fastcall TfTaipei::mHintClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Toggles the AutoPlay mode where the games plays a move every few seconds (see tAutoPlayTimer)
 void __fastcall TfTaipei::mAutoPlayClick(TObject *Sender)
 {
    this->mAutoPlay->Checked = !this->mAutoPlay->Checked;
@@ -452,6 +457,7 @@ void __fastcall TfTaipei::mAutoPlayClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Plays automaticly the best move from a given game state
 void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
 {
    TTile* CurrentTile = this->TileList;
@@ -515,6 +521,7 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
       Sleep(100);
       this->HideTileStep(SelectTile, true);
    } else {
+      //AutoPlay is stuck and cannot finish the game as it was
       if (this->SelectedTile != NULL) {
          this->SelectedTile->Selected = false;
          this->SelectedTile = NULL;
@@ -526,6 +533,41 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Senses keystrokes used as shortcuts
+void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
+      TShiftState Shift)
+{
+   //If not in Edit mode
+   if (this->EditLayer == 0) {
+      if(Key == 0x8 /*BackSpace*/)
+         this->mBackup->Click();
+
+      if (Key == 0x48 /*VK_KEY_H*/)
+         this->mHint->Click();
+
+      if (Key == 0x54 /*VK_KEY_T*/) {
+         this->mDragon->Visible      = true;
+         this->mWatchBuilds->Visible = true;
+         if (Shift.Contains(ssCtrl)) {
+            this->mLighten->Visible    = true;
+            this->mDarken->Visible     = true;
+            this->mDifficulty->Visible = true;
+            this->mPeek->Visible       = true;
+         }
+         if (Shift.Contains(ssShift)) {
+            this->mFile->Visible = true;
+         }
+         if (Shift.Contains(ssAlt)) {
+            this->N5->Visible      = true;
+            this->mCreate->Visible = true;
+            this->mPlay->Visible   = true;
+         }
+      }
+   }
+}
+//---------------------------------------------------------------------------
+
+//Senses cursor mouvements in the game area, primarily cursor over tile events
 void __fastcall TfTaipei::FormMouseMove(TObject *Sender, TShiftState Shift,
    int X, int Y)
 {
@@ -535,89 +577,167 @@ void __fastcall TfTaipei::FormMouseMove(TObject *Sender, TShiftState Shift,
    Pos.x = X;
    Pos.y = Y;
 
-   this->EditLayer > 0;
-   CurrentTile = this->GetTile(Pos);
-   if (CurrentTile != NULL) {
-      this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":" + IntToStr(CurrentTile->Hint);
+   if (this->EditLayer > 0) {
+      //Edit Layout Mode
+      CurrentTile = this->GetTile(Pos, this->EditLayer-1);
+      if (CurrentTile != NULL) {
+         if (CurrentTile != this->SelectedTile) {
+            //Toggle the tile under the cursor to wireframe, only if not visible
+            if(this->SelectedTile != NULL)
+               this->SelectedTile->WireFrame = false;
 
-      if (this->Peek && CurrentTile->Z > 0 ) {
-         Screen->Cursor = crHelp;  //crHandPoint; crDrag;
-      } else {
-         if (this->IsTileFree(CurrentTile))
-            Screen->Cursor = crCross;
-         else
-            Screen->Cursor = crDefault;
+            if (!CurrentTile->Visible) {
+               CurrentTile->WireFrame = true;
+               this->SelectedTile = CurrentTile;
+               this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":";
+               this->Repaint();
+            }
+         }
       }
-   } else
-      Screen->Cursor = crDefault;
+   } else {
+      //Normal Mode
+      CurrentTile = this->GetTile(Pos);
+      if (CurrentTile != NULL) {
+         this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":" + IntToStr(CurrentTile->Hint);
+
+         if (this->Peek && CurrentTile->Z > 0 ) {
+            Screen->Cursor = crHelp;  //crHandPoint; crDrag;
+         } else {
+            if (this->IsTileFree(CurrentTile))
+               Screen->Cursor = crCross;
+            else
+               Screen->Cursor = crDefault;
+         }
+      } else
+         Screen->Cursor = crDefault;
+   }
 }
 //---------------------------------------------------------------------------
 
+//Senses cursor clicks in the game area, primarily tile selection events
+void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
+   TShiftState Shift, int X, int Y)
+{
+   TTile* CurrentTile;
+   TPoint Pos;
+   int LayerCmp = 0;
+   bool Found = false;
+
+   Pos.x = X;
+   Pos.y = Y;
+
+   //Normal game Mode
+   if (this->EditLayer == 0) {
+      CurrentTile = this->GetTile(Pos);
+      if (CurrentTile != NULL ) {
+         this->tAutoPlay->Enabled = false;
+         this->mAutoPlay->Checked = false;
+
+         //Peek Mode
+         if (this->Peek) {
+            //Tile clicked on toggles visibility for 750ms
+            CurrentTile->Visible = false;
+            this->Repaint();
+            this->Peek = false;
+            this->mPeek->Checked = false;
+            Sleep(750);
+            CurrentTile->Visible = true;
+            this->Repaint();
+         } else { //Normal Mode
+            //Tile clicked on get selected or removed
+            if (!this->IsTileFree(CurrentTile)) {
+               if (this->mMessages->Checked)
+                  Application->MessageBox("Tiles isn't free", "Taipei", MB_OK | MB_ICONINFORMATION);
+            } else {
+               //Select 1 tile
+               if (this->SelectedTile == NULL) {
+                  CurrentTile->Selected = true;
+                  this->SelectedTile = CurrentTile;
+                  this->Repaint();
+               } else {
+                  //Same tile = Deselect
+                  if(CurrentTile == this->SelectedTile) {
+                     this->SelectedTile->Selected = false;
+                     this->SelectedTile = NULL;
+                     this->Repaint();
+                  } else {
+                     //Match tile with selection
+                     if (CurrentTile->Type == this->SelectedTile->Type){
+                        this->HideTileStep(CurrentTile, false);
+                     } else {
+                        CurrentTile->Selected = true;
+                        this->Repaint();
+                        Sleep(75);
+                        CurrentTile->Selected = false;
+                        this->Repaint();
+                        if (this->mMessages->Checked)
+                           Application->MessageBox("Tiles don't match", "Taipei", MB_OK | MB_ICONINFORMATION);
+                     }
+                  }
+               }
+            }
+         }
+      }
+   } else if (this->EditTileCmp < 144) { //Edit Layout Mode, and not already to many tiles
+      //Tile clicked on toggles(Left/Right button) between visibility and wireframe
+      if(Button == mbLeft) {
+         if (this->SelectedTile != NULL) {
+            this->SelectedTile->WireFrame = false;
+            this->SelectedTile->Visible = true;
+            this->SelectedTile->Selected = true;
+            this->Repaint();
+            Sleep(75);
+            this->SelectedTile->Selected = false;
+            this->SelectedTile = NULL;
+         }
+      } else if (Button == mbRight) {
+         CurrentTile = this->GetTile(Pos);
+         if (CurrentTile == NULL ) {
+               //For cases where basic GetTile struggles
+               Pos.x = ((Pos.x - 8) - (this->EditLayer-1 * TILEXOFFSET)) / HALFTILESIZE;
+               Pos.y = ((Pos.y - 6) + (this->EditLayer-1 * TILEYOFFSET)) / HALFTILESIZE;
+               CurrentTile = this->TileList;
+               while(CurrentTile != NULL && !Found) {
+               if (   CurrentTile->X <= Pos.x && CurrentTile->Y <= Pos.y
+                   && CurrentTile->X+1 >= Pos.x && CurrentTile->Y+1 >= Pos.y
+                   && CurrentTile->Z == this->EditLayer-1
+                   && CurrentTile->Visible)
+                  Found = true;
+               else
+                  CurrentTile = CurrentTile->Next;
+            }
+         }
+
+         if (CurrentTile != NULL ) {
+            CurrentTile->Selected = true;
+            this->Repaint();
+            Sleep(75);
+            CurrentTile->Selected = false;
+            CurrentTile->Visible = false;
+         }
+      }
+
+      CurrentTile = this->TileList;
+      while(CurrentTile != NULL ) {
+         if (CurrentTile->Visible)
+            LayerCmp++;
+         CurrentTile = CurrentTile->Next;
+      }
+      this->EditTileCmp = LayerCmp;
+      lNbTileLayout->Caption = IntToStr(LayerCmp);
+      this->Repaint();
+   }
+}
+//---------------------------------------------------------------------------
+
+//Calls tiles drawing procedures
 void __fastcall TfTaipei::FormPaint(TObject *Sender)
 {
    this->DrawAllTiles();
 }
 //---------------------------------------------------------------------------
 
-void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
-   TShiftState Shift, int X, int Y)
-{
-   TTile* CurrentTile;
-   TPoint Pos;
-
-   Pos.x = X;
-   Pos.y = Y;
-
-   CurrentTile = this->GetTile(Pos);
-   if (CurrentTile != NULL ) {
-      this->tAutoPlay->Enabled = false;
-      this->mAutoPlay->Checked = false;
-      
-      if (this->Peek) {
-         CurrentTile->Visible = false;
-         this->Repaint();
-         this->Peek = false;
-         this->mPeek->Checked = false;
-         Sleep(750);
-         CurrentTile->Visible = true;
-         this->Repaint();
-      } else {
-         if (!this->IsTileFree(CurrentTile)) {
-            if (this->mMessages->Checked)
-               Application->MessageBox("Tiles isn't free", "Taipei", MB_OK | MB_ICONINFORMATION);
-         } else {
-            //Select 1 tile
-            if (this->SelectedTile == NULL) {
-               CurrentTile->Selected = true;
-               this->SelectedTile = CurrentTile;
-               this->Repaint();
-            } else {
-               //Same tile = Deselect
-               if(CurrentTile == this->SelectedTile) {
-                  this->SelectedTile->Selected = false;
-                  this->SelectedTile = NULL;
-                  this->Repaint();
-               } else {
-                  //Match tile with selection
-                  if (CurrentTile->Type == this->SelectedTile->Type){
-                     this->HideTileStep(CurrentTile, false);
-                  } else {
-                     CurrentTile->Selected = true;
-                     this->Repaint();
-                     Sleep(75);
-                     CurrentTile->Selected = false;
-                     this->Repaint();
-                     if (this->mMessages->Checked)
-                        Application->MessageBox("Tiles don't match", "Taipei", MB_OK | MB_ICONINFORMATION);
-                  }
-               }
-            }
-         }
-      }
-   }
-}
-//---------------------------------------------------------------------------
-
+//Called when a tile is selected, if valid, it will select a tile or match with a selected tile and test if game is done
 void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
 {
    TTile* CurrentTile;
@@ -645,13 +765,18 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
          Found = true;
       CurrentTile = CurrentTile->Next;
    }
-   if (!Found && !pAutoPlay) {
-      if (this->GamedDone <= 0) {
+   if (!Found) {
+      if (!pAutoPlay) {
          this->tAutoPlay->Enabled = false;
          this->mAutoPlay->Checked = false;
-         
-         MsgNo = Random(CONGRATSIZE-1);
-         Application->MessageBox(gCongrat[MsgNo].c_str(), "Winner'qus Fortune", MB_OK | MB_ICONEXCLAMATION);
+         if (this->GamedDone <= 0) {
+            MsgNo = Random(CONGRATSIZE-1);
+            Application->MessageBox(gCongrat[MsgNo].c_str(), "Winner'qus Fortune", MB_OK | MB_ICONEXCLAMATION);
+         }
+      } else {
+         this->tAutoPlay->Enabled = false;
+         this->mAutoPlay->Checked = false;
+         PlaySound("SystemAsterisk", 0, SND_ALIAS || SND_ASYNC);
       }
       this->GamedDone = 32; // :-) if you back enough moves, you get a winning message
    } else {
@@ -673,18 +798,18 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
       }
 
       if (!Found) {
+         this->tAutoPlay->Enabled = false;
+         this->mAutoPlay->Checked = false;
          if (!pAutoPlay)
             Application->MessageBox("No free tiles", "Taipei", MB_OK | MB_ICONSTOP);
-         else {
-            this->tAutoPlay->Enabled = false;
-            this->mAutoPlay->Checked = false;
+         else
             PlaySound("SystemAsterisk", 0, SND_ALIAS || SND_ASYNC);
-         }
       }
    }
 }
 //---------------------------------------------------------------------------
 
+//Takes a int as parameters and returns its value as a Byte
 Byte __fastcall TfTaipei::CustomIntToByte(int pByte)
 {
    if(pByte > 255) return 255;
@@ -693,6 +818,7 @@ Byte __fastcall TfTaipei::CustomIntToByte(int pByte)
 }
 //---------------------------------------------------------------------------
 
+//Inverts the RGB color values of a bitmap given in parameter
 void __fastcall TfTaipei::Invert(Graphics::TBitmap *pBitmap)
 {
    Byte *pyx;
@@ -712,6 +838,7 @@ void __fastcall TfTaipei::Invert(Graphics::TBitmap *pBitmap)
 }
 //---------------------------------------------------------------------------
 
+//Draws a tile with a graphic according to the given parameters (Called by DrawAllTiles )
 void TfTaipei::DrawTile(int pId, bool pSel, int pRealX, int pRealY, bool pNotch, int pDebug)
 {
    TPoint LeftSide[4];
@@ -782,6 +909,7 @@ void TfTaipei::DrawTile(int pId, bool pSel, int pRealX, int pRealY, bool pNotch,
 }
 //---------------------------------------------------------------------------
 
+//Draws all visibles tiles on the game area as graphic or wireframe depending on requirements
 void TfTaipei::DrawAllTiles(void)
 {
    //Draw from the Bottom to the Top Layer (z 0 to 7)
@@ -846,6 +974,7 @@ void TfTaipei::DrawAllTiles(void)
 }
 //---------------------------------------------------------------------------
 
+//Locates a tile at a given grid/game coordinates with exact match or optional first match
 TTile* TfTaipei::GetTile(int pX, int pY, int pZ, bool pExactPos, bool pExactZ)
 {
    bool Found = false;
@@ -901,27 +1030,57 @@ TTile* TfTaipei::GetTile(int pX, int pY, int pZ, bool pExactPos, bool pExactZ)
 }
 //---------------------------------------------------------------------------
 
-TTile* TfTaipei::GetTile(TPoint pRealPos)
+//Locates a tile at a given form/pixel coordinates with exact match or optional first match
+TTile* TfTaipei::GetTile(TPoint pRealPos, int pExactZ)
 {
    static TTile* CurrentTile;
    int x, y;
    int z = MAXNUMBERLAYER;
    bool Found = false;
 
-   do {
-      x = ((pRealPos.x - 8) - (z * TILEXOFFSET)) / HALFTILESIZE;
-      y = ((pRealPos.y - 6) + (z * TILEYOFFSET)) / HALFTILESIZE;
+   //If used in normal mode, ExactZ is only used for Design/Edit Layout Mode
+   if (pExactZ < 0) {
+      do {
+         x = ((pRealPos.x - 8) - (z * TILEXOFFSET)) / HALFTILESIZE;
+         y = ((pRealPos.y - 6) + (z * TILEYOFFSET)) / HALFTILESIZE;
 
-      CurrentTile = this->GetTile(x, y, z, false, true);
+         CurrentTile = this->GetTile(x, y, z, false, true);
+         if (CurrentTile != NULL)
+            Found = CurrentTile->Visible || CurrentTile->WireFrame ;
+         z -= 1;
+      } while(!Found && z >= 0);
+
+      if (Found)
+         return CurrentTile;
+   }
+   else
+   {
+      //This mode is only used in Design/Edit Layout Mode
+      x = ((pRealPos.x - 8) - (pExactZ * TILEXOFFSET)) / HALFTILESIZE;
+      y = ((pRealPos.y - 6) + (pExactZ * TILEYOFFSET)) / HALFTILESIZE;
+
+      //Find any tile that could interfere
+      CurrentTile = this->TileList;
+      while(CurrentTile != NULL && !Found) {
+         if (   CurrentTile->X >= x-1 && CurrentTile->Y >= y-1
+             && CurrentTile->X <= x+1 && CurrentTile->Y <= y+1
+             && CurrentTile->Z == pExactZ
+             && CurrentTile->Visible)
+               return CurrentTile;
+             else
+               CurrentTile = CurrentTile->Next;
+      }
+
+      CurrentTile = this->GetTile(x, y, pExactZ, true, true);
       if (CurrentTile != NULL)
-         Found = CurrentTile->Visible;
-      z -= 1;
-   } while(!Found && z >= 0);
+         return CurrentTile;
 
-   return CurrentTile;
+   }
+   return NULL;
 }
 //---------------------------------------------------------------------------
 
+//Tests if a tile can be played, not covered anywhere on top or locked on both sides
 bool TfTaipei::IsTileFree(TTile* pTile)
 {
    TTile* TestTile;
@@ -984,6 +1143,7 @@ bool TfTaipei::IsTileFree(TTile* pTile)
 }
 //---------------------------------------------------------------------------
 
+//Build the linked list used to store a game layout from the hard coded arrays or cleanup a custom game layout
 void TfTaipei::BuildStructure(int pMode)
 {
    TTile* NextTile;
@@ -994,13 +1154,6 @@ void TfTaipei::BuildStructure(int pMode)
    int Delta;
    const int *CurrLayer, *CurrSize;
    const int *Layer0, *Layer1, *Layer2, *Layer3, *Layer4, *Layer5, *Layer6;
-
-   //Empty previous tile list
-   while(this->TileList != NULL) {
-     NextTile = this->TileList->Next;
-     delete this->TileList;
-     this->TileList = NextTile;
-   }
 
    //Reset tile type array
    for (i=0; i<36; i++) {
@@ -1015,162 +1168,184 @@ void TfTaipei::BuildStructure(int pMode)
       this->SpecialGraph2[i] = i;
    }
 
-   switch(pMode) {
-      case 0 : CurrSize = DEBUGSIZE;
-               Layer0   = DEBUGL0;
-               Layer1   = DEBUGL1;
-               Layer2   = NULL;
-               Layer3   = NULL;
-               Layer4   = NULL;
-               Layer5   = NULL;
-               Layer6   = NULL;
-         break;
-      case 1 : CurrSize = STANDARDSIZE;
-               Layer0   = STANDARDL0;
-               Layer1   = STANDARDL1;
-               Layer2   = STANDARDL2;
-               Layer3   = STANDARDL3;
-               Layer4   = STANDARDL4;
-               Layer5   = STANDARDL5;
-               Layer6   = STANDARDL6;
-         break;
-      case 2 : CurrSize = BRIDGESIZE;
-               Layer0   = BRIDGEL0;
-               Layer1   = BRIDGEL1;
-               Layer2   = BRIDGEL2;
-               Layer3   = BRIDGEL3;
-               Layer4   = BRIDGEL4;
-               Layer5   = BRIDGEL5;
-               Layer6   = BRIDGEL6;
-         break;
-      case 3 : CurrSize = CASTLESIZE;
-               Layer0   = CASTLEL0;
-               Layer1   = CASTLEL1;
-               Layer2   = CASTLEL2;
-               Layer3   = CASTLEL3;
-               Layer4   = CASTLEL4;
-               Layer5   = NULL;
-               Layer6   = NULL;
-         break;
-      case 4 : CurrSize = CUBESIZE;
-               Layer0   = CUBEL0;
-               Layer1   = CUBEL1;
-               Layer2   = CUBEL2;
-               Layer3   = CUBEL3;
-               Layer4   = CUBEL4;
-               Layer5   = NULL;
-               Layer6   = NULL;
-         break;
-      case 5 : CurrSize = GLYPHSIZE;
-               Layer0   = GLYPHL0;
-               Layer1   = GLYPHL1;
-               Layer2   = GLYPHL2;
-               Layer3   = GLYPHL3;
-               Layer4   = GLYPHL4;
-               Layer5   = GLYPHL5;
-               Layer6   = NULL;
-         break;
-      case 6 : CurrSize = PYRAMIDSIZE;
-               Layer0   = PYRAMIDL0;
-               Layer1   = PYRAMIDL1;
-               Layer2   = PYRAMIDL2;
-               Layer3   = PYRAMIDL3;
-               Layer4   = PYRAMIDL4;
-               Layer5   = PYRAMIDL5;
-               Layer6   = NULL;
-         break;
-      case 7 : CurrSize = SPIRALSIZE;
-               Layer0   = SPIRALL0;
-               Layer1   = SPIRALL1;
-               Layer2   = SPIRALL2;
-               Layer3   = SPIRALL3;
-               Layer4   = SPIRALL4;
-               Layer5   = NULL;
-               Layer6   = NULL;
-         break;
-      case 8 : CurrSize = DRAGONSIZE;
-               Layer0   = DRAGONL0;
-               Layer1   = DRAGONL1;
-               Layer2   = DRAGONL2;
-               Layer3   = DRAGONL3;
-               Layer4   = DRAGONL4;
-               Layer5   = NULL;
-               Layer6   = NULL;
-         break;
-   }
+   //If not custom layout, reset everything
+   if (this->Mode != 99) {
+      //Empty previous tile list
+      while(this->TileList != NULL) {
+        NextTile = this->TileList->Next;
+        delete this->TileList;
+        this->TileList = NextTile;
+      }
 
-   for (i = MAXNUMBERLAYER-1; i >= 0; i--) {
-      if (CurrSize[i] > 0) {
-         switch(i) {
-            case 0 : CurrLayer = Layer0;
-               break;
-            case 1 : CurrLayer = Layer1;
-               break;
-            case 2 : CurrLayer = Layer2;
-               break;
-            case 3 : CurrLayer = Layer3;
-               break;
-            case 4 : CurrLayer = Layer4;
-               break;
-            case 5 : CurrLayer = Layer5;
-               break;
-            case 6 : CurrLayer = Layer6;
-               break;
+      switch(pMode) {
+         case 0 : CurrSize = DEBUGSIZE;
+                  Layer0   = DEBUGL0;
+                  Layer1   = DEBUGL1;
+                  Layer2   = NULL;
+                  Layer3   = NULL;
+                  Layer4   = NULL;
+                  Layer5   = NULL;
+                  Layer6   = NULL;
+            break;
+         case 1 : CurrSize = STANDARDSIZE;
+                  Layer0   = STANDARDL0;
+                  Layer1   = STANDARDL1;
+                  Layer2   = STANDARDL2;
+                  Layer3   = STANDARDL3;
+                  Layer4   = STANDARDL4;
+                  Layer5   = STANDARDL5;
+                  Layer6   = STANDARDL6;
+            break;
+         case 2 : CurrSize = BRIDGESIZE;
+                  Layer0   = BRIDGEL0;
+                  Layer1   = BRIDGEL1;
+                  Layer2   = BRIDGEL2;
+                  Layer3   = BRIDGEL3;
+                  Layer4   = BRIDGEL4;
+                  Layer5   = BRIDGEL5;
+                  Layer6   = BRIDGEL6;
+            break;
+         case 3 : CurrSize = CASTLESIZE;
+                  Layer0   = CASTLEL0;
+                  Layer1   = CASTLEL1;
+                  Layer2   = CASTLEL2;
+                  Layer3   = CASTLEL3;
+                  Layer4   = CASTLEL4;
+                  Layer5   = NULL;
+                  Layer6   = NULL;
+            break;
+         case 4 : CurrSize = CUBESIZE;
+                  Layer0   = CUBEL0;
+                  Layer1   = CUBEL1;
+                  Layer2   = CUBEL2;
+                  Layer3   = CUBEL3;
+                  Layer4   = CUBEL4;
+                  Layer5   = NULL;
+                  Layer6   = NULL;
+            break;
+         case 5 : CurrSize = GLYPHSIZE;
+                  Layer0   = GLYPHL0;
+                  Layer1   = GLYPHL1;
+                  Layer2   = GLYPHL2;
+                  Layer3   = GLYPHL3;
+                  Layer4   = GLYPHL4;
+                  Layer5   = GLYPHL5;
+                  Layer6   = NULL;
+            break;
+         case 6 : CurrSize = PYRAMIDSIZE;
+                  Layer0   = PYRAMIDL0;
+                  Layer1   = PYRAMIDL1;
+                  Layer2   = PYRAMIDL2;
+                  Layer3   = PYRAMIDL3;
+                  Layer4   = PYRAMIDL4;
+                  Layer5   = PYRAMIDL5;
+                  Layer6   = NULL;
+            break;
+         case 7 : CurrSize = SPIRALSIZE;
+                  Layer0   = SPIRALL0;
+                  Layer1   = SPIRALL1;
+                  Layer2   = SPIRALL2;
+                  Layer3   = SPIRALL3;
+                  Layer4   = SPIRALL4;
+                  Layer5   = NULL;
+                  Layer6   = NULL;
+            break;
+         case 8 : CurrSize = DRAGONSIZE;
+                  Layer0   = DRAGONL0;
+                  Layer1   = DRAGONL1;
+                  Layer2   = DRAGONL2;
+                  Layer3   = DRAGONL3;
+                  Layer4   = DRAGONL4;
+                  Layer5   = NULL;
+                  Layer6   = NULL;
+            break;
+      }
+
+      for (i = MAXNUMBERLAYER-1; i >= 0; i--) {
+         if (CurrSize[i] > 0) {
+            switch(i) {
+               case 0 : CurrLayer = Layer0;
+                  break;
+               case 1 : CurrLayer = Layer1;
+                  break;
+               case 2 : CurrLayer = Layer2;
+                  break;
+               case 3 : CurrLayer = Layer3;
+                  break;
+               case 4 : CurrLayer = Layer4;
+                  break;
+               case 5 : CurrLayer = Layer5;
+                  break;
+               case 6 : CurrLayer = Layer6;
+                  break;
+               }
+
+            //Init layer Buffer
+            //Buffer[31][17];
+            for (x=0; x<GAMEWIDTH; x++) {
+               for (y=0; y<GAMEHEIGHT; y++) {
+                  Buffer[x][y] = false;
+               }
             }
 
-         //Init layer Buffer
-         //Buffer[31][17];
-         for (x=0; x<GAMEWIDTH; x++) {
-            for (y=0; y<GAMEHEIGHT; y++) {
-               Buffer[x][y] = false;
+     //NOTE, INSERT IS BACKWARD
+     //Draw from the Bottom to the Top Layer (z 0 to 7)
+     //Draw from the Upper to the Lower Row (y 0 to 17)
+     //Draw from the Right to the Left Column (x 31 to 0)
+
+   // Array Definition Before Rotate               \/ Finish Here
+   /*int DebugL0[40] = {4,6,  6,6,  8,6,  10,6,  12,6,            /\
+                        4,8,  6,8,  8,8,  10,8,  12,8,            |
+                        4,10, 6,10, 8,10, 10,10, 12,10,           |
+                        4,12, 6,12, 8,12, 10,12, 12,12 };        Y--  then  X++ ---->
+          Read From Here /\
+
+   // Array After Rotate   X++ ---->
+   //Read From Here ----> {4,12,  4,10,  4,8,  4,6,   Y--
+                           6,12,  6,10,  6,8,  6,6,    |
+                           8,12,  8,10,  8,8,  8,6,    |
+                           10,12, 10,10, 10,8, 10,6,   \/
+                           12,12, 12,10, 12,8, 12,6} <---- Finish Here */
+
+            //Set layer Buffer
+            for(j=0; j<CurrSize[i]*2; j=j+2){
+               x = CurrLayer[j];
+               y = CurrLayer[j+1];
+               Buffer[x][y] = true;
             }
-         }
 
-  //NOTE, INSERT IS BACKWARD
-  //Draw from the Bottom to the Top Layer (z 0 to 7)
-  //Draw from the Upper to the Lower Row (y 0 to 17)
-  //Draw from the Right to the Left Column (x 31 to 0)
-
-// Array Definition Before Rotate               \/ Finish Here
-/*int DebugL0[40] = {4,6,  6,6,  8,6,  10,6,  12,6,            /\
-                     4,8,  6,8,  8,8,  10,8,  12,8,            |
-                     4,10, 6,10, 8,10, 10,10, 12,10,           |
-                     4,12, 6,12, 8,12, 10,12, 12,12 };        Y--  then  X++ ---->
-       Read From Here /\
-
-// Array After Rotate   X++ ---->
-//Read From Here ----> {4,12,  4,10,  4,8,  4,6,   Y--
-                        6,12,  6,10,  6,8,  6,6,    |
-                        8,12,  8,10,  8,8,  8,6,    |
-                        10,12, 10,10, 10,8, 10,6,   \/
-                        12,12, 12,10, 12,8, 12,6} <---- Finish Here */
-
-         //Set layer Buffer
-         for(j=0; j<CurrSize[i]*2; j=j+2){
-            x = CurrLayer[j];
-            y = CurrLayer[j+1];
-            Buffer[x][y] = true;
-         }
-
-         //Read layer Buffer 90 degree rotated
-         //Buffer[31][17];
-         for (x=0; x<GAMEWIDTH; x++) {
-            for (y=GAMEHEIGHT-1; y>=0; y--) {
-               //Insert into tile list
-               if (Buffer[x][y]) {
-                  NextTile = new TTile(IdCmp, x, y, i);
-                  NextTile->Next = this->TileList;
-                  this->TileList = NextTile;
-                  IdCmp++;
+            //Read layer Buffer 90 degree rotated
+            //Buffer[31][17];
+            for (x=0; x<GAMEWIDTH; x++) {
+               for (y=GAMEHEIGHT-1; y>=0; y--) {
+                  //Insert into tile list
+                  if (Buffer[x][y]) {
+                     NextTile = new TTile(IdCmp, x, y, i);
+                     NextTile->Next = this->TileList;
+                     this->TileList = NextTile;
+                     IdCmp++;
+                  }
                }
             }
          }
+      }
+   } else {
+      // If custom layout, just reset value in memory
+      NextTile = this->TileList;
+      while(NextTile != NULL) {
+         if (NextTile->Step >= 0) {
+            NextTile->Step = -1;
+            NextTile->Visible = true;
+            NextTile->Selected  = false;
+         }
+         NextTile = NextTile->Next;
       }
    }
    this->Repaint();
 }
 //---------------------------------------------------------------------------
 
+//Sets the Type and Graphic in pairs on every tiles of the layout in a way that guarantees at least one solution
 void TfTaipei::FillStructure(int pSeed)
 {
    TTile* CurrentTile;
@@ -1333,6 +1508,7 @@ void TfTaipei::FillStructure(int pSeed)
 }
 //---------------------------------------------------------------------------
 
+//Finds a random tile in the layout that can be played/remove, it may fails to find any
 TTile* TfTaipei::FindCandidate(TPoint pMinXY, TPoint pMaxXY)
 {
    static TTile* CandidateTile;
@@ -1379,6 +1555,7 @@ TTile* TfTaipei::FindCandidate(TPoint pMinXY, TPoint pMaxXY)
 }
 //---------------------------------------------------------------------------
 
+//Takes the basic Type and Graph values from FillStructure() to a tile and handles specials cases/tiles
 void TfTaipei::AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, int pDelta, int& pSpecGraph1, int& pSpecGraph2)
 {
    pCandidateTileA->Type  = this->TileType[pDelta];
@@ -1418,6 +1595,7 @@ void TfTaipei::AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, i
 }
 //---------------------------------------------------------------------------
 
+//Saves a current game/layout state to a file
 void __fastcall TfTaipei::mSaveClick(TObject *Sender)
 {
    TTile* CurrentTile;
@@ -1441,6 +1619,7 @@ void __fastcall TfTaipei::mSaveClick(TObject *Sender)
         Param->SetAttribute("LayoutType", (AnsiString)GameType);
         Param->SetAttribute("GameNumber", (int)this->GameNumber);
         Param->SetAttribute("StepBack", (int)this->StepBack);
+        Param->SetAttribute("Radius", (int)this->Radius);
 
           _di_IXMLNode SelTile = XmlRoot->CreateElement("SelectedTile", "");
           Param->ChildNodes->Add(SelTile);
@@ -1458,6 +1637,7 @@ void __fastcall TfTaipei::mSaveClick(TObject *Sender)
            Tile = XmlRoot->CreateElement("Tile", "");
            TileState->ChildNodes->Add(Tile);
            Tile->SetAttribute("ID", (int)CurrentTile->Id);
+           Tile->SetAttribute("Step", (int)CurrentTile->Step);
 
              VisTile = XmlRoot->CreateElement("Visible", "");
              Tile->ChildNodes->Add(VisTile);
@@ -1475,11 +1655,11 @@ void __fastcall TfTaipei::mSaveClick(TObject *Sender)
 /*
 <?xml version="1.0"?>
 <Game Name="Taipei">
-  <Param LayoutType="Cube" GameNumber="18215" StepBack="31">
+  <Param LayoutType="Cube" GameNumber="18215" StepBack="31" Radius="0">
     <SelectedTile>34</SelectedTile>
   </Param>
   <TileState TileCount="124">
-    <Tile ID="124">
+    <Tile ID="124" Step="-1">
       <Visible>True</Visible>
     </Tile>
 <!--[...]-->
@@ -1488,11 +1668,12 @@ void __fastcall TfTaipei::mSaveClick(TObject *Sender)
 */
 //---------------------------------------------------------------------------
 
+//Loads a file to retrive previously saved game/layout state
 void __fastcall TfTaipei::mLoadClick(TObject *Sender)
 {
    TTile* CurrentTile;
    AnsiString LayoutType, GameName, Visible;
-   int GameNo, Step, SelTile, TileCount, ID;
+   int GameNo, StepBack, SelTile, Radius, TileCount, ID, Step;
 
    if (this->GameOpenDialog->Execute() == true) {
       try
@@ -1500,17 +1681,19 @@ void __fastcall TfTaipei::mLoadClick(TObject *Sender)
          this->XMLDoc->FileName = this->GameOpenDialog->FileName;
          this->XMLDoc->Active = true;
          _di_IXMLNode XmlRoot = XMLDoc->DocumentElement;
-         _di_IXMLNode Param = XmlRoot->ChildNodes->Nodes[0];
+         //_di_IXMLNode Param = XmlRoot->ChildNodes->Nodes[0];
          GameName = XmlRoot->GetAttribute("Name");
          if (GameName == "Taipei") {
             _di_IXMLNode Param = XmlRoot->ChildNodes->Nodes[0];
             LayoutType = Param->GetAttribute("LayoutType");
-            GameNo = Param->GetAttribute("GameNumber");
-            Step = Param->GetAttribute("StepBack");
+            GameNo     = Param->GetAttribute("GameNumber");
+            StepBack   = Param->GetAttribute("StepBack");
+            Radius     = Param->GetAttribute("Radius");
 
             this->Mode = this->mLayout->Find(LayoutType)->Tag;
+            this->Radius   = Radius;
             this->InitGame(GameNo);
-            this->StepBack = Step;
+            this->StepBack = StepBack;
 
             if (Param->ChildNodes->Nodes[0]->IsTextElement)
               SelTile = StrToInt(Param->ChildNodes->Nodes[0]->Text);
@@ -1526,7 +1709,8 @@ void __fastcall TfTaipei::mLoadClick(TObject *Sender)
                throw;
 
             for(int i = 0; i < TileList->Count; i++) {
-               ID = TileList->Get(i)->GetAttribute("ID");
+               ID      = TileList->Get(i)->GetAttribute("ID");
+               Step    = TileList->Get(i)->GetAttribute("Step");
                Visible = TileList->Get(i)->ChildNodes->Nodes[0]->Text;
 
                if (CurrentTile != NULL && CurrentTile->Id != ID) {
@@ -1543,10 +1727,22 @@ void __fastcall TfTaipei::mLoadClick(TObject *Sender)
                   this->SelectedTile = CurrentTile;
                }
                CurrentTile->Visible = UpperCase(Visible) == "TRUE";
+               CurrentTile->Step    = Step;
                CurrentTile = CurrentTile->Next;
             }
          }
          this->XMLDoc->Active = false;
+
+         this->mStandard->Checked = false;
+         this->mBridge->Checked   = false;
+         this->mCastle->Checked   = false;
+         this->mCube->Checked     = false;
+         this->mGlyph->Checked    = false;
+         this->mPyramid->Checked  = false;
+         this->mSpiral->Checked   = false;
+         this->mDragon->Checked   = false;
+         this->mCustom->Checked   = false;
+         this->mLayout->Find(LayoutType)->Checked = true;
       }
       catch (Exception &E)
       {
@@ -1558,33 +1754,120 @@ void __fastcall TfTaipei::mLoadClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+//Enters Edit Layout Mode where an user may create or edit a custom layout
 void __fastcall TfTaipei::mCreateClick(TObject *Sender)
 {
-   //Now what ?!
-   //ShowMessage("Not Yet!");
+   TTile* NextTile;
+   int z, IdCmp = 1;
+   int x, y;
+
+   this->tAutoPlay->Enabled = false;
+   this->mAutoPlay->Checked = false;
+   this->iMainLogo->Visible = false;
+   this->lMainTitleShadow->Visible = false;
+   this->lMainTitle->Visible = false;
+   this->StepBack = 0;
+   this->GamedDone = 0;
+   this->HintLoop = 0;
+   this->SelectedTile = NULL;
+   this->GameNumber = 0;
+   this->Caption = "Taipei Create/Edit Layout";
+
    this->Menu = mMainLayout;
    this->lNbTileLayout->Visible = true;
    this->mLayerClick(this->mLayer1);
    this->EditLayer = 1;
+   this->EditTileCmp = 0;
+
+   //Empty previous tile list
+   while(this->TileList != NULL) {
+      NextTile = this->TileList->Next;
+      delete this->TileList;
+      this->TileList = NextTile;
+   }
+
+   //Fill every possible space with invisible tiles
+   for (z = MAXNUMBERLAYER-1; z >= 0; z--) {
+      for (x=0; x<GAMEWIDTH-1; x++) {
+         for (y=GAMEHEIGHT-2; y>=0; y--) {
+         //Insert into tile list
+            NextTile = new TTile(IdCmp, x, y, z);
+            NextTile->Next = this->TileList;
+            this->TileList = NextTile;
+            NextTile->Type = 99;
+            NextTile->Graph = 42;
+            IdCmp++;
+         }
+      }
+   }
+   this->Repaint();
 }
 //---------------------------------------------------------------------------
 
+//Exits Edit Layout Mode without saving and returns to an empty game area
 void __fastcall TfTaipei::mExitLayoutClick(TObject *Sender)
 {
+   TTile* NextTile;
+
+   this->SelectedTile = NULL;
+   this->Caption = "Taipei Game";
    this->EditLayer = 0;
    this->lNbTileLayout->Visible = false;
    this->Menu = mMenu;
+
+   //Empty previous tile list
+   while(this->TileList != NULL) {
+      NextTile = this->TileList->Next;
+      delete this->TileList;
+      this->TileList = NextTile;
+   }
+   this->Repaint();
 }
 //---------------------------------------------------------------------------
 
+//Loads a custom layout from a file to be played
 void __fastcall TfTaipei::mPlayClick(TObject *Sender)
 {
-   //Now what ?!
-   ShowMessage("Not Yet!");
+   int GameNo;
+
+   Randomize();
+   GameNo = Random(32767);
+
+
+   /*else {
    //LayoutOpenDialog
+   //Read XML
+   //Create Tile from File
+      for (i = 0; i<1; i++) {
+         //Insert into tile list
+            NextTile = new TTile(IdCmp, x, y, z);
+
+            //Add at the end
+            NextTile->Next = NULL;
+            if (CurrentTile != NULL) {
+               CurrentTile->Next = NextTile;
+            } else {
+               this->TileList = NextTile;
+            }
+            CurrentTile = NextTile;
+
+            NextTile->Type = 99;
+            NextTile->Graph = 42;
+            IdCmp++;
+         }
+   } */
+
+
+
+   //LayoutOpenDialog
+   //Create List
+   //this->InitGame(GameNo);
+
+   ShowMessage("Not Yet!");
 }
 //---------------------------------------------------------------------------
 
+//Called by every entries in the Layer menu, sets the EditLayer using the caller's Tag
 void __fastcall TfTaipei::mLayerClick(TObject *Sender)
 {
    this->mLayer7->Checked = false;
@@ -1602,20 +1885,131 @@ void __fastcall TfTaipei::mLayerClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-
+//Loads a custom layout from a file to be edited
 void __fastcall TfTaipei::mEditLayoutClick(TObject *Sender)
 {
-   //Now what ?!
-   ShowMessage("Not Yet!");
+   TTile* NextTile;
+   TTile* CurrentTile = NULL;
+   int i, IdCmp = 1;
+   int x, y, z;
+
+   //Empty previous tile list
+   while(this->TileList != NULL) {
+      NextTile = this->TileList->Next;
+      delete this->TileList;
+      this->TileList = NextTile;
+   }
+
    //LayoutOpenDialog
+   //Read XML
+   //Create Tile from File
+   /*for (i = 0; i<1; i++) {
+         //Find tile in list at x/y/z
+         //Flip tile visibility
+            IdCmp++;
+   }
+   this->Repaint();*/
+
+   ShowMessage("Not Yet!");
 }
 //---------------------------------------------------------------------------
 
+//Saves the current custom layout being edited/created to a file
 void __fastcall TfTaipei::mSaveLayoutClick(TObject *Sender)
 {
-   //Now what ?!
-   ShowMessage("Not Yet!");
+   TTile* CurrentTile;
+   int i, IdCmp = 1;
+   int x, y, z;
+
    //LayoutSaveDialog
+   CurrentTile = this->TileList;
+   //Write Header
+   while(CurrentTile != NULL) {
+      if (CurrentTile->Visible) {
+         //Write Tile
+      }
+      CurrentTile = CurrentTile->Next;
+   }
+   ShowMessage("Not Yet!");
+   
+}
+//---------------------------------------------------------------------------
+
+//Exits Edit Layout Mode and loads the current custom layout to be played
+void __fastcall TfTaipei::mTestLayoutClick(TObject *Sender)
+{
+   TTile* CurrentTile = NULL;
+   TTile* PreviousTile = NULL;
+   TTile* NewTileList;
+   TTile* NextTile;
+   int IdCmp = 1;
+   int GameNo;
+
+   //test if even number of tiles
+   if (this->EditTileCmp%2 != 0) {
+      Application->MessageBox("Tile count is not even", "Taipei", MB_OK | MB_ICONINFORMATION);
+   } else {
+      //Add all visible tiles to a new list
+      CurrentTile = this->TileList;
+      while(CurrentTile != NULL) {
+         if (CurrentTile->Visible) {
+            //Insert into tile list
+            NextTile = new TTile(IdCmp, CurrentTile->X, CurrentTile->Y, CurrentTile->Z);
+
+            //Add at the end of the list
+            NextTile->Next = NULL;
+            if (PreviousTile == NULL)
+               NewTileList = NextTile;
+            else
+               PreviousTile->Next = NextTile;
+            PreviousTile = NextTile;
+            IdCmp++;
+         }
+         CurrentTile = CurrentTile->Next;
+      }
+
+      //Exit Create/Edit Mode
+      if (this->SelectedTile != NULL) {
+         this->SelectedTile->WireFrame = false;
+         this->SelectedTile = NULL;
+      }
+      this->Caption = "Taipei Game";
+      this->EditLayer = 0;
+      this->lNbTileLayout->Visible = false;
+      this->Menu = mMenu;
+
+      //Empty previous tile list
+      while(this->TileList != NULL) {
+         NextTile = this->TileList->Next;
+         delete this->TileList;
+         this->TileList = NextTile;
+      }
+
+      //Make new Layout playable
+      this->TileList = NewTileList;
+      this->mLayoutMenuClick(mCustom);
+   }
+}
+//---------------------------------------------------------------------------
+
+//Clears the current custom layout being edited/created
+void __fastcall TfTaipei::mClearClick(TObject *Sender)
+{
+   TTile* CurrentTile;
+
+   //Clear all tiles in Create/Edit Layout Mode
+   if (this->SelectedTile != NULL) {
+      this->SelectedTile->WireFrame = false;
+      this->SelectedTile = NULL;
+   }
+
+   CurrentTile = this->TileList;
+   while(CurrentTile != NULL) {
+      if (CurrentTile->Visible)
+         CurrentTile->Visible = false;
+      CurrentTile = CurrentTile->Next;
+   }
+   this->SelectedTile = NULL;
 }
 //---------------------------------------------------------------------------
 

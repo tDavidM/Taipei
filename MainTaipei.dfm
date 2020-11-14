@@ -826,7 +826,7 @@ object fTaipei: TfTaipei
   object lNbTileLayout: TLabel
     Left = 8
     Top = 8
-    Width = 41
+    Width = 7
     Height = 13
     Caption = '0'
     Font.Charset = DEFAULT_CHARSET
@@ -1005,6 +1005,12 @@ object fTaipei: TfTaipei
       object mDragon: TMenuItem
         Tag = 8
         Caption = 'Dragon'
+        Visible = False
+        OnClick = mLayoutMenuClick
+      end
+      object mCustom: TMenuItem
+        Tag = 99
+        Caption = 'Custom'
         Visible = False
         OnClick = mLayoutMenuClick
       end
@@ -18540,12 +18546,24 @@ object fTaipei: TfTaipei
     object mCreateLayout: TMenuItem
       Caption = '&File'
       object mEditLayout: TMenuItem
-        Caption = 'Edit Layout'
+        Caption = '&Edit Layout'
         OnClick = mEditLayoutClick
       end
       object mSaveLayout: TMenuItem
         Caption = '&Save Layout'
         OnClick = mSaveLayoutClick
+      end
+      object mTestLayout: TMenuItem
+        Caption = '&Play'
+        OnClick = mTestLayoutClick
+      end
+      object N6: TMenuItem
+        Caption = '-'
+      end
+      object mClear: TMenuItem
+        Caption = '&Clear'
+        Hint = 'mClearLayout'
+        OnClick = mClearClick
       end
       object mExitLayout: TMenuItem
         Caption = '&Return'
