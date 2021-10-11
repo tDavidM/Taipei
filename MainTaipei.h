@@ -3,12 +3,12 @@
 #ifndef MainTaipeiH
 #define MainTaipeiH
 //---------------------------------------------------------------------------
-#include <Classes.hpp>
-#include <Controls.hpp>
-#include <StdCtrls.hpp>
-#include <Forms.hpp>
-#include <Menus.hpp>
-#include <ImgList.hpp>
+#include <System.Classes.hpp>
+#include <Vcl.Controls.hpp>
+#include <Vcl.StdCtrls.hpp>
+#include <Vcl.Forms.hpp>
+#include <Vcl.Menus.hpp>
+#include <Vcl.ImgList.hpp>
 #include <ExtCtrls.hpp>
 #include <Graphics.hpp>
 #include <XPMan.hpp>
@@ -17,12 +17,13 @@
 #include <XMLDoc.hpp>
 #include <xmldom.hpp>
 #include <XMLIntf.hpp>
+#include <System.ImageList.hpp>
 
 #define CONGRATSIZE 39
 
 //---------------------------------------------------------------------------
 
-const AnsiString gCongrat[CONGRATSIZE] = {
+const String gCongrat[CONGRATSIZE] = {
    "You will attend a party where strange customs prevail.",
    "A visit with friends will prove an enjoyable occasion.",
    "Strange new experiences will add to your joy of living.",
@@ -506,7 +507,7 @@ __published:
    void __fastcall mHowtoPlayClick(TObject *Sender);   //Shows a system MessageBox with help to play the game
    void __fastcall mStrategyClick(TObject *Sender);    //Shows a system MessageBox with strategies to play the game
    void __fastcall mDarkenClick(TObject *Sender);      //Lowers the tile's eges brightness
-   void __fastcall mLightenClick(TObject *Sender);     //Increase the tile's eges brightness
+   void __fastcall mLightenClick(TObject *Sender);     //Increases the tile's eges brightness
    void __fastcall mPeekClick(TObject *Sender);        //Toggles the Peek Mode used to temporarily remove any tile to have a look under
    void __fastcall mBeginnerClick(TObject *Sender);    //Activates Beginner Mode where a pair of tiles will preferencialy be located within a limited distance when possible
    void __fastcall mExpertClick(TObject *Sender);      //Activates Expert Mode where a pair of tiles have no bias on their relative random location
@@ -528,13 +529,14 @@ __published:
 
    void __fastcall mSaveClick(TObject *Sender);        //Saves a current game/layout state to a file
    void __fastcall mLoadClick(TObject *Sender);        //Loads a file to retrive previously saved game/layout state
+
    void __fastcall mCreateClick(TObject *Sender);      //Enters Edit Layout Mode where an user may create or edit a custom layout
    void __fastcall mExitLayoutClick(TObject *Sender);  //Exits Edit Layout Mode without saving
-   
    void __fastcall mLayerClick(TObject *Sender);       //Called by every entries in the Layer menu, sets the EditLayer using the caller's Tag
-   void __fastcall mPlayClick(TObject *Sender);        //Loads a custom layout from a file to be played
-   void __fastcall mEditLayoutClick(TObject *Sender);  //Loads a custom layout from a file to be edited
+
    void __fastcall mSaveLayoutClick(TObject *Sender);  //Saves the current custom layout being edited/created to a file
+   void __fastcall mEditLayoutClick(TObject *Sender);  //Loads a custom layout from a file to be edited
+   void __fastcall mPlayClick(TObject *Sender);        //Loads a custom layout from a file to be played
    void __fastcall mTestLayoutClick(TObject *Sender);  //Exits Edit Layout Mode and loads the current custom layout to be played
    void __fastcall mClearClick(TObject *Sender);       //Clears the current custom layout being edited/created
 private:
@@ -579,6 +581,8 @@ private:
    TTile* FindCandidate(TPoint pMinXY, TPoint pMaxXY);      //Finds a random tile in the layout that can be played/remove, it may fails to find any
    void AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB,
                         int pDelta, int& pSpecGraph1, int& pSpecGraph2); //Takes the basic Type and Graph values from FillStructure() to a tile and handles specials cases/tiles
+
+   bool TestIfValid(int Mode);                                  //Tests if a custom layout can produce an valid game
 
 public:
    __fastcall TfTaipei(TComponent* Owner);

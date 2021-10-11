@@ -3,10 +3,10 @@
 #ifndef SelGameH
 #define SelGameH
 //---------------------------------------------------------------------------
-#include <Classes.hpp>
-#include <Controls.hpp>
-#include <StdCtrls.hpp>
-#include <Forms.hpp>
+#include <System.Classes.hpp>
+#include <Vcl.Controls.hpp>
+#include <Vcl.StdCtrls.hpp>
+#include <Vcl.Forms.hpp>
 //---------------------------------------------------------------------------
 class TfSelectGame : public TForm
 {

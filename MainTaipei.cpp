@@ -8,6 +8,8 @@
 
 #include "MainTaipei.h"
 #include "SelGame.h"
+
+#include "EditorCode.cpp"
 //---------------------------------------------------------------------------
 #pragma package(smart_init)
 #pragma resource "*.dfm"
@@ -125,9 +127,9 @@ void __fastcall TfTaipei::mWatchBuildsClick(TObject *Sender)
 //Shows a system MessageBox with infos about Taipei
 void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 {
-   AnsiString DialogText = "Taipei !\n\nOriginal by Dave Norris\n"
-                           "Clone by David Morrissette\n\n2020\n\n\nPress T in main window for more options";
-   AnsiString DialogCap  = "About " + this->Caption;
+   String DialogText = "Taipei !\n\nOriginal by Dave Norris\n"
+					   "Clone by David Morrissette\n\n2020\n\n\nPress T in main window for more options";
+   String DialogCap  = "About " + this->Caption;
 
    if (this->mDragon->Visible) {
       DialogText = DialogText + "\n or Ctrl+T";
@@ -135,39 +137,39 @@ void __fastcall TfTaipei::mAboutClick(TObject *Sender)
          DialogText = DialogText + "\n or Shift+T";
       DialogText = DialogText + "\n these options were available in lesser known versions of Taipei.";
    }
-   Application->MessageBox(DialogText.c_str(), DialogCap.c_str(), MB_OK);
+   Application->MessageBox(DialogText.w_str(), DialogCap.w_str(), MB_OK);
 }
 //--------------------------------------------------------------------------
 
 //Shows a system MessageBox with help to play the game
 void __fastcall TfTaipei::mHowtoPlayClick(TObject *Sender)
 {
-   AnsiString DialogText = "Taipei is a modern, solitaire version of the ancient oriental game, Mah-Jongg.\n\n"
-                           "Playing Taipei is simple.\n"
-                           "The object of Taipei is to remove all of the tiles from the board.\n\n"
-                           "Tiles are removed from the board in matching pairs.\n"
-                           "Tiles can only be removed if they are \"free\".\n"
-                           "A tile is \"free\" if:\n"
-                           "  1) it has no tiles on top of it, and\n"
-                           "  2) you can \"slide\" the tile out to the right or left.";
+   String DialogText = "Taipei is a modern, solitaire version of the ancient oriental game, Mah-Jongg.\n\n"
+                       "Playing Taipei is simple.\n"
+                       "The object of Taipei is to remove all of the tiles from the board.\n\n"
+                       "Tiles are removed from the board in matching pairs.\n"
+                       "Tiles can only be removed if they are \"free\".\n"
+                       "A tile is \"free\" if:\n"
+                       "  1) it has no tiles on top of it, and\n"
+                       "  2) you can \"slide\" the tile out to the right or left.";
 
-   Application->MessageBox(DialogText.c_str(), "What is Taipei?", MB_OK);
+   Application->MessageBox(DialogText.w_str(), L"What is Taipei?", MB_OK);
 }
 //---------------------------------------------------------------------------
 
 //Shows a system MessageBox with strategies to play the game
 void __fastcall TfTaipei::mStrategyClick(TObject *Sender)
 {
-   AnsiString DialogText = "Winning a game is much like solving an intricate puzzle.\n"
-                           "One false move at the beginning could ruin your chances at victory.\n"
-                           "And, while every game has a solution, finding it often takes hours of diligent play.\n\n"
-                           "Here are some hints if you are having difficulty solving the Taipei puzzles:\n"
-                           "1.  Remove the end tiles as soon as you can, "
-                           "especially those tiles that block more than one tile.\n"
-                           "2.  If all four tiles in a matching set are free, you can remove all four safely.\n"
-                           "3.  Work from the outside in.";
+   String DialogText = "Winning a game is much like solving an intricate puzzle.\n"
+                       "One false move at the beginning could ruin your chances at victory.\n"
+                       "And, while every game has a solution, finding it often takes hours of diligent play.\n\n"
+                       "Here are some hints if you are having difficulty solving the Taipei puzzles:\n"
+                       "1.  Remove the end tiles as soon as you can, "
+                       "especially those tiles that block more than one tile.\n"
+                       "2.  If all four tiles in a matching set are free, you can remove all four safely.\n"
+                       "3.  Work from the outside in.";
 
-   Application->MessageBox(DialogText.c_str(), "Strategy", MB_OK); // MB_HELP
+   Application->MessageBox(DialogText.w_str(), L"Strategy", MB_OK); // MB_HELP
 }
 //---------------------------------------------------------------------------
 
@@ -181,7 +183,7 @@ void __fastcall TfTaipei::mDarkenClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-//Increase the tile's eges brightness
+//Increases the tile's eges brightness
 void __fastcall TfTaipei::mLightenClick(TObject *Sender)
 {
    if (this->Shade < 8)
@@ -620,7 +622,7 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
 {
    TTile* CurrentTile;
    TPoint Pos;
-   int LayerCmp = 0;
+   int TileCmp = 0;
    bool Found = false;
 
    Pos.x = X;
@@ -647,7 +649,7 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
             //Tile clicked on get selected or removed
             if (!this->IsTileFree(CurrentTile)) {
                if (this->mMessages->Checked)
-                  Application->MessageBox("Tiles isn't free", "Taipei", MB_OK | MB_ICONINFORMATION);
+            Application->MessageBox(L"Tiles isn't free", L"Taipei", MB_OK | MB_ICONINFORMATION);
             } else {
                //Select 1 tile
                if (this->SelectedTile == NULL) {
@@ -671,7 +673,17 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
                         CurrentTile->Selected = false;
                         this->Repaint();
                         if (this->mMessages->Checked)
-                           Application->MessageBox("Tiles don't match", "Taipei", MB_OK | MB_ICONINFORMATION);
+                           Application->MessageBox(L"Tiles don't match", L"Taipei", MB_OK | MB_ICONINFORMATION);
+
+                        //There's a strange rare bug where the SelectedTile is no longer visible (seen once)
+                        //  or not free yet (uncertain) and that jams the game logics, the player can't recover
+                        if (!this->SelectedTile->Visible || !this->IsTileFree(this->SelectedTile)) {
+                          //So when this situation is detected, simply deselect the invalid selection
+                          this->SelectedTile->Selected = false;
+                          this->SelectedTile = NULL;
+                          this->Repaint();
+                          //Testers did not repport using Autoplay, just regular click when the bug occurs
+                        }
                      }
                   }
                }
@@ -720,11 +732,11 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
       CurrentTile = this->TileList;
       while(CurrentTile != NULL ) {
          if (CurrentTile->Visible)
-            LayerCmp++;
+            TileCmp++;
          CurrentTile = CurrentTile->Next;
       }
-      this->EditTileCmp = LayerCmp;
-      lNbTileLayout->Caption = IntToStr(LayerCmp);
+      this->EditTileCmp = TileCmp;
+      this->lNbTileLayout->Caption = IntToStr(TileCmp);
       this->Repaint();
    }
 }
@@ -771,7 +783,7 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
          this->mAutoPlay->Checked = false;
          if (this->GamedDone <= 0) {
             MsgNo = Random(CONGRATSIZE-1);
-            Application->MessageBox(gCongrat[MsgNo].c_str(), "Winner'qus Fortune", MB_OK | MB_ICONEXCLAMATION);
+            Application->MessageBox(gCongrat[MsgNo].w_str(), L"Winner'qus Fortune", MB_OK | MB_ICONEXCLAMATION);
          }
       } else {
          this->tAutoPlay->Enabled = false;
@@ -801,7 +813,7 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
          this->tAutoPlay->Enabled = false;
          this->mAutoPlay->Checked = false;
          if (!pAutoPlay)
-            Application->MessageBox("No free tiles", "Taipei", MB_OK | MB_ICONSTOP);
+            Application->MessageBox(L"No free tiles", L"Taipei", MB_OK | MB_ICONSTOP);
          else
             PlaySound("SystemAsterisk", 0, SND_ALIAS || SND_ASYNC);
       }
@@ -1595,421 +1607,9 @@ void TfTaipei::AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, i
 }
 //---------------------------------------------------------------------------
 
-//Saves a current game/layout state to a file
-void __fastcall TfTaipei::mSaveClick(TObject *Sender)
-{
-   TTile* CurrentTile;
-   AnsiString GameType = this->mLayout->Items[this->Mode]->Caption;
 
-   GameType = StringReplace(GameType, "&", "", TReplaceFlags() << rfReplaceAll);
-   this->GameSaveDialog->Title = GameType + " #" + IntToStr(this->GameNumber);
-   this->GameSaveDialog->FileName = "Taipei_Game_" + GameType + "_" + IntToStr(this->GameNumber);
-
-   if (this->TileList != NULL && this->GameSaveDialog->Execute() == true)
-   {
-      _di_IXMLDocument XmlRoot = NewXMLDocument();
-      XmlRoot->Options = TXMLDocOptions() << doNodeAutoIndent;
-
-      _di_IXMLNode Game = XmlRoot->CreateElement("Game", "");
-      XmlRoot->ChildNodes->Add(Game);
-      Game->SetAttribute("Name", (AnsiString)"Taipei");
-
-        _di_IXMLNode Param = XmlRoot->CreateElement("Param", "");
-        Game->ChildNodes->Add(Param);
-        Param->SetAttribute("LayoutType", (AnsiString)GameType);
-        Param->SetAttribute("GameNumber", (int)this->GameNumber);
-        Param->SetAttribute("StepBack", (int)this->StepBack);
-        Param->SetAttribute("Radius", (int)this->Radius);
-
-          _di_IXMLNode SelTile = XmlRoot->CreateElement("SelectedTile", "");
-          Param->ChildNodes->Add(SelTile);
-          if (this->SelectedTile != NULL)
-              SelTile->Text = IntToStr(this->SelectedTile->Id);
-
-        _di_IXMLNode TileState = XmlRoot->CreateElement("TileState", "");
-        Game->ChildNodes->Add(TileState);
-        TileState->SetAttribute("TileCount", (int)this->TileList->Id);
-
-        _di_IXMLNode Tile;
-        _di_IXMLNode VisTile;
-        CurrentTile = this->TileList;
-        while(CurrentTile != NULL) {
-           Tile = XmlRoot->CreateElement("Tile", "");
-           TileState->ChildNodes->Add(Tile);
-           Tile->SetAttribute("ID", (int)CurrentTile->Id);
-           Tile->SetAttribute("Step", (int)CurrentTile->Step);
-
-             VisTile = XmlRoot->CreateElement("Visible", "");
-             Tile->ChildNodes->Add(VisTile);
-             if(CurrentTile->Visible == true)
-                VisTile->Text = "True";
-             else
-                VisTile->Text = "False";
-
-           CurrentTile = CurrentTile->Next;
-        }
-      XmlRoot->SaveToFile(this->GameSaveDialog->FileName);
-   }
-}
-//---------------------------------------------------------------------------
-/*
-<?xml version="1.0"?>
-<Game Name="Taipei">
-  <Param LayoutType="Cube" GameNumber="18215" StepBack="31" Radius="0">
-    <SelectedTile>34</SelectedTile>
-  </Param>
-  <TileState TileCount="124">
-    <Tile ID="124" Step="-1">
-      <Visible>True</Visible>
-    </Tile>
-<!--[...]-->
-  </TileState>
-</Game>
-*/
 //---------------------------------------------------------------------------
 
-//Loads a file to retrive previously saved game/layout state
-void __fastcall TfTaipei::mLoadClick(TObject *Sender)
-{
-   TTile* CurrentTile;
-   AnsiString LayoutType, GameName, Visible;
-   int GameNo, StepBack, SelTile, Radius, TileCount, ID, Step;
-
-   if (this->GameOpenDialog->Execute() == true) {
-      try
-      {
-         this->XMLDoc->FileName = this->GameOpenDialog->FileName;
-         this->XMLDoc->Active = true;
-         _di_IXMLNode XmlRoot = XMLDoc->DocumentElement;
-         //_di_IXMLNode Param = XmlRoot->ChildNodes->Nodes[0];
-         GameName = XmlRoot->GetAttribute("Name");
-         if (GameName == "Taipei") {
-            _di_IXMLNode Param = XmlRoot->ChildNodes->Nodes[0];
-            LayoutType = Param->GetAttribute("LayoutType");
-            GameNo     = Param->GetAttribute("GameNumber");
-            StepBack   = Param->GetAttribute("StepBack");
-            Radius     = Param->GetAttribute("Radius");
-
-            this->Mode = this->mLayout->Find(LayoutType)->Tag;
-            this->Radius   = Radius;
-            this->InitGame(GameNo);
-            this->StepBack = StepBack;
-
-            if (Param->ChildNodes->Nodes[0]->IsTextElement)
-              SelTile = StrToInt(Param->ChildNodes->Nodes[0]->Text);
-            else
-              SelTile = -1;
-
-            _di_IXMLNode TileState = XmlRoot->ChildNodes->Nodes[1];
-            TileCount = StrToInt(TileState->GetAttribute("TileCount"));
-
-            CurrentTile = this->TileList;
-            _di_IXMLNodeList TileList = TileState->ChildNodes;
-            if (TileCount != TileList->Count)
-               throw;
-
-            for(int i = 0; i < TileList->Count; i++) {
-               ID      = TileList->Get(i)->GetAttribute("ID");
-               Step    = TileList->Get(i)->GetAttribute("Step");
-               Visible = TileList->Get(i)->ChildNodes->Nodes[0]->Text;
-
-               if (CurrentTile != NULL && CurrentTile->Id != ID) {
-                  CurrentTile = this->TileList;
-                  while(CurrentTile != NULL && CurrentTile->Id != ID) {
-                     CurrentTile = CurrentTile->Next;
-                  }
-               }
-               if (CurrentTile == NULL || CurrentTile->Id != ID)
-                  throw;
-
-               if (CurrentTile->Id == SelTile) {
-                  CurrentTile->Selected = true;
-                  this->SelectedTile = CurrentTile;
-               }
-               CurrentTile->Visible = UpperCase(Visible) == "TRUE";
-               CurrentTile->Step    = Step;
-               CurrentTile = CurrentTile->Next;
-            }
-         }
-         this->XMLDoc->Active = false;
-
-         this->mStandard->Checked = false;
-         this->mBridge->Checked   = false;
-         this->mCastle->Checked   = false;
-         this->mCube->Checked     = false;
-         this->mGlyph->Checked    = false;
-         this->mPyramid->Checked  = false;
-         this->mSpiral->Checked   = false;
-         this->mDragon->Checked   = false;
-         this->mCustom->Checked   = false;
-         this->mLayout->Find(LayoutType)->Checked = true;
-      }
-      catch (Exception &E)
-      {
-         Application->MessageBox("Invalid File", "Taipei", MB_OK | MB_ICONINFORMATION);
-      }
-
-      this->Repaint();
-   }
-}
 //---------------------------------------------------------------------------
 
-//Enters Edit Layout Mode where an user may create or edit a custom layout
-void __fastcall TfTaipei::mCreateClick(TObject *Sender)
-{
-   TTile* NextTile;
-   int z, IdCmp = 1;
-   int x, y;
-
-   this->tAutoPlay->Enabled = false;
-   this->mAutoPlay->Checked = false;
-   this->iMainLogo->Visible = false;
-   this->lMainTitleShadow->Visible = false;
-   this->lMainTitle->Visible = false;
-   this->StepBack = 0;
-   this->GamedDone = 0;
-   this->HintLoop = 0;
-   this->SelectedTile = NULL;
-   this->GameNumber = 0;
-   this->Caption = "Taipei Create/Edit Layout";
-
-   this->Menu = mMainLayout;
-   this->lNbTileLayout->Visible = true;
-   this->mLayerClick(this->mLayer1);
-   this->EditLayer = 1;
-   this->EditTileCmp = 0;
-
-   //Empty previous tile list
-   while(this->TileList != NULL) {
-      NextTile = this->TileList->Next;
-      delete this->TileList;
-      this->TileList = NextTile;
-   }
-
-   //Fill every possible space with invisible tiles
-   for (z = MAXNUMBERLAYER-1; z >= 0; z--) {
-      for (x=0; x<GAMEWIDTH-1; x++) {
-         for (y=GAMEHEIGHT-2; y>=0; y--) {
-         //Insert into tile list
-            NextTile = new TTile(IdCmp, x, y, z);
-            NextTile->Next = this->TileList;
-            this->TileList = NextTile;
-            NextTile->Type = 99;
-            NextTile->Graph = 42;
-            IdCmp++;
-         }
-      }
-   }
-   this->Repaint();
-}
-//---------------------------------------------------------------------------
-
-//Exits Edit Layout Mode without saving and returns to an empty game area
-void __fastcall TfTaipei::mExitLayoutClick(TObject *Sender)
-{
-   TTile* NextTile;
-
-   this->SelectedTile = NULL;
-   this->Caption = "Taipei Game";
-   this->EditLayer = 0;
-   this->lNbTileLayout->Visible = false;
-   this->Menu = mMenu;
-
-   //Empty previous tile list
-   while(this->TileList != NULL) {
-      NextTile = this->TileList->Next;
-      delete this->TileList;
-      this->TileList = NextTile;
-   }
-   this->Repaint();
-}
-//---------------------------------------------------------------------------
-
-//Loads a custom layout from a file to be played
-void __fastcall TfTaipei::mPlayClick(TObject *Sender)
-{
-   int GameNo;
-
-   Randomize();
-   GameNo = Random(32767);
-
-
-   /*else {
-   //LayoutOpenDialog
-   //Read XML
-   //Create Tile from File
-      for (i = 0; i<1; i++) {
-         //Insert into tile list
-            NextTile = new TTile(IdCmp, x, y, z);
-
-            //Add at the end
-            NextTile->Next = NULL;
-            if (CurrentTile != NULL) {
-               CurrentTile->Next = NextTile;
-            } else {
-               this->TileList = NextTile;
-            }
-            CurrentTile = NextTile;
-
-            NextTile->Type = 99;
-            NextTile->Graph = 42;
-            IdCmp++;
-         }
-   } */
-
-
-
-   //LayoutOpenDialog
-   //Create List
-   //this->InitGame(GameNo);
-
-   ShowMessage("Not Yet!");
-}
-//---------------------------------------------------------------------------
-
-//Called by every entries in the Layer menu, sets the EditLayer using the caller's Tag
-void __fastcall TfTaipei::mLayerClick(TObject *Sender)
-{
-   this->mLayer7->Checked = false;
-   this->mLayer6->Checked = false;
-   this->mLayer5->Checked = false;
-   this->mLayer4->Checked = false;
-   this->mLayer3->Checked = false;
-   this->mLayer2->Checked = false;
-   this->mLayer1->Checked = false;
-
-   TMenuItem *Current = (TMenuItem *)Sender;
-   Current->Checked = true;
-
-   this->EditLayer = Current->Tag;
-}
-//---------------------------------------------------------------------------
-
-//Loads a custom layout from a file to be edited
-void __fastcall TfTaipei::mEditLayoutClick(TObject *Sender)
-{
-   TTile* NextTile;
-   TTile* CurrentTile = NULL;
-   int i, IdCmp = 1;
-   int x, y, z;
-
-   //Empty previous tile list
-   while(this->TileList != NULL) {
-      NextTile = this->TileList->Next;
-      delete this->TileList;
-      this->TileList = NextTile;
-   }
-
-   //LayoutOpenDialog
-   //Read XML
-   //Create Tile from File
-   /*for (i = 0; i<1; i++) {
-         //Find tile in list at x/y/z
-         //Flip tile visibility
-            IdCmp++;
-   }
-   this->Repaint();*/
-
-   ShowMessage("Not Yet!");
-}
-//---------------------------------------------------------------------------
-
-//Saves the current custom layout being edited/created to a file
-void __fastcall TfTaipei::mSaveLayoutClick(TObject *Sender)
-{
-   TTile* CurrentTile;
-   int i, IdCmp = 1;
-   int x, y, z;
-
-   //LayoutSaveDialog
-   CurrentTile = this->TileList;
-   //Write Header
-   while(CurrentTile != NULL) {
-      if (CurrentTile->Visible) {
-         //Write Tile
-      }
-      CurrentTile = CurrentTile->Next;
-   }
-   ShowMessage("Not Yet!");
-   
-}
-//---------------------------------------------------------------------------
-
-//Exits Edit Layout Mode and loads the current custom layout to be played
-void __fastcall TfTaipei::mTestLayoutClick(TObject *Sender)
-{
-   TTile* CurrentTile = NULL;
-   TTile* PreviousTile = NULL;
-   TTile* NewTileList;
-   TTile* NextTile;
-   int IdCmp = 1;
-   int GameNo;
-
-   //test if even number of tiles
-   if (this->EditTileCmp%2 != 0) {
-      Application->MessageBox("Tile count is not even", "Taipei", MB_OK | MB_ICONINFORMATION);
-   } else {
-      //Add all visible tiles to a new list
-      CurrentTile = this->TileList;
-      while(CurrentTile != NULL) {
-         if (CurrentTile->Visible) {
-            //Insert into tile list
-            NextTile = new TTile(IdCmp, CurrentTile->X, CurrentTile->Y, CurrentTile->Z);
-
-            //Add at the end of the list
-            NextTile->Next = NULL;
-            if (PreviousTile == NULL)
-               NewTileList = NextTile;
-            else
-               PreviousTile->Next = NextTile;
-            PreviousTile = NextTile;
-            IdCmp++;
-         }
-         CurrentTile = CurrentTile->Next;
-      }
-
-      //Exit Create/Edit Mode
-      if (this->SelectedTile != NULL) {
-         this->SelectedTile->WireFrame = false;
-         this->SelectedTile = NULL;
-      }
-      this->Caption = "Taipei Game";
-      this->EditLayer = 0;
-      this->lNbTileLayout->Visible = false;
-      this->Menu = mMenu;
-
-      //Empty previous tile list
-      while(this->TileList != NULL) {
-         NextTile = this->TileList->Next;
-         delete this->TileList;
-         this->TileList = NextTile;
-      }
-
-      //Make new Layout playable
-      this->TileList = NewTileList;
-      this->mLayoutMenuClick(mCustom);
-   }
-}
-//---------------------------------------------------------------------------
-
-//Clears the current custom layout being edited/created
-void __fastcall TfTaipei::mClearClick(TObject *Sender)
-{
-   TTile* CurrentTile;
-
-   //Clear all tiles in Create/Edit Layout Mode
-   if (this->SelectedTile != NULL) {
-      this->SelectedTile->WireFrame = false;
-      this->SelectedTile = NULL;
-   }
-
-   CurrentTile = this->TileList;
-   while(CurrentTile != NULL) {
-      if (CurrentTile->Visible)
-         CurrentTile->Visible = false;
-      CurrentTile = CurrentTile->Next;
-   }
-   this->SelectedTile = NULL;
-}
-//---------------------------------------------------------------------------
 
