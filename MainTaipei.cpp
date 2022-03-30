@@ -76,7 +76,7 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
    this->DoubleBuffered = true;
    Application->Icon = this->Icon;
 
-   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020";
+   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020-2022";
    this->lMainTitleShadow->Caption = this->lMainTitle->Caption;
 
    this->Mode = 1;
@@ -91,12 +91,22 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
 
    this->ClientHeight = 310;
 
+   OutputDebugString("Taipei.exe\nParams: \n  -d debug mode\n  -m no messages\n");
+   OutputDebugString("Press T in main window for Dragon layout and WatchBuild option");
+   OutputDebugString("  Ctrl+T  for Difficulty and Peak options");
+   OutputDebugString("  Shift+T for Save Game and Load Game functionalities");
+   OutputDebugString("  Shift+Alt+T for experimental custom layout editor");
+
    for (int i=1;i<=ParamCount();i++) {
-      if (LowerCase(ParamStr(i)) != "") {
+      //DEBUG mode
+      if (LowerCase(ParamStr(i)) == "-d") {
          Beep();
          this->DebugDraw = true;
          this->Mode = 0;
          lDebug->Visible = true;
+      //No Messages
+      } else if (LowerCase(ParamStr(i)) == "-m") {
+         this->mMessages->Click();
       }
   }
 }
@@ -128,7 +138,7 @@ void __fastcall TfTaipei::mWatchBuildsClick(TObject *Sender)
 void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 {
    String DialogText = "Taipei !\n\nOriginal by Dave Norris\n"
-					   "Clone by David Morrissette\n\n2020\n\n\nPress T in main window for more options";
+					   "Clone by David Morrissette\n\n2020-2022\n\n\nPress T in main window for more options";
    String DialogCap  = "About " + this->Caption;
 
    if (this->mDragon->Visible) {
