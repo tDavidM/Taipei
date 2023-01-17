@@ -4,6 +4,7 @@
 #include <mmsystem.h>
 #include <algorithm>
 #include <exception>
+#include <registry.hpp>
 #pragma hdrstop
 
 #include "MainTaipei.h"
@@ -73,10 +74,13 @@ void __fastcall TfTaipei::mExitClick(TObject *Sender)
 //Initialises form's default values and read command line call parameters
 void __fastcall TfTaipei::FormCreate(TObject *Sender)
 {
+   bool OpenResult;
+   TRegistry* Reg = new TRegistry(KEY_READ);
+
    this->DoubleBuffered = true;
    Application->Icon = this->Icon;
 
-   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020-2022";
+   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020-2023";
    this->lMainTitleShadow->Caption = this->lMainTitle->Caption;
 
    this->Mode = 1;
@@ -85,6 +89,7 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
    this->Radius = 0;
    this->Peek = false;
    this->EditLayer = 0;
+   this->AdvancedUserMode = 0;
 
    this->TileList     = NULL;
    this->SelectedTile = NULL;
@@ -97,6 +102,13 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
    OutputDebugString("  Shift+T for Save Game and Load Game functionalities");
    OutputDebugString("  Shift+Alt+T for experimental custom layout editor");
 
+   Reg->RootKey = HKEY_CURRENT_USER;
+   OpenResult = Reg->OpenKey("Software\\tDavidM\\Taipei\\", true);
+   if(OpenResult)
+      this->mMessages->Checked = Reg->ReadString("MessagesVisible") == "True";
+	Reg->CloseKey();
+	Reg->Free();
+
    for (int i=1;i<=ParamCount();i++) {
       //DEBUG mode
       if (LowerCase(ParamStr(i)) == "-d") {
@@ -106,9 +118,9 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
          lDebug->Visible = true;
       //No Messages
       } else if (LowerCase(ParamStr(i)) == "-m") {
-         this->mMessages->Click();
+         this->mMessages->Checked = false;
       }
-  }
+   }
 }
 //---------------------------------------------------------------------------
 
@@ -116,6 +128,19 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
 void __fastcall TfTaipei::mMessagesClick(TObject *Sender)
 {
    this->mMessages->Checked = !this->mMessages->Checked;
+
+   //If Ctrl+T was pressed
+   if (this->AdvancedUserMode > 0) {
+      bool OpenResult;
+	   TRegistry* Reg = new TRegistry(KEY_WRITE);
+
+	   Reg->RootKey = HKEY_CURRENT_USER;
+      OpenResult = Reg->OpenKey("Software\\tDavidM\\Taipei\\", true);
+	   if(OpenResult)
+         Reg->WriteString("MessagesVisible", this->mMessages->Checked ? "True" : "False");
+	   Reg->CloseKey();
+	   Reg->Free();
+   }
 }
 //---------------------------------------------------------------------------
 
@@ -138,12 +163,12 @@ void __fastcall TfTaipei::mWatchBuildsClick(TObject *Sender)
 void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 {
    String DialogText = "Taipei !\n\nOriginal by Dave Norris\n"
-					   "Clone by David Morrissette\n\n2020-2022\n\n\nPress T in main window for more options";
+					   "Clone by David Morrissette\n\n2020-2023\n\n\nPress T in main window for more options";
    String DialogCap  = "About " + this->Caption;
 
-   if (this->mDragon->Visible) {
+   if (this->AdvancedUserMode > 0) {
       DialogText = DialogText + "\n or Ctrl+T";
-      if (this->mPeek->Visible)
+      if (this->AdvancedUserMode > 1)
          DialogText = DialogText + "\n or Shift+T";
       DialogText = DialogText + "\n these options were available in lesser known versions of Taipei.";
    }
@@ -560,19 +585,23 @@ void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
       if (Key == 0x54 /*VK_KEY_T*/) {
          this->mDragon->Visible      = true;
          this->mWatchBuilds->Visible = true;
+         this->AdvancedUserMode = this->AdvancedUserMode | 1;
          if (Shift.Contains(ssCtrl)) {
             this->mLighten->Visible    = true;
             this->mDarken->Visible     = true;
             this->mDifficulty->Visible = true;
             this->mPeek->Visible       = true;
+            this->AdvancedUserMode = this->AdvancedUserMode | 2;
          }
          if (Shift.Contains(ssShift)) {
             this->mFile->Visible = true;
+            this->AdvancedUserMode = this->AdvancedUserMode | 4;
          }
          if (Shift.Contains(ssAlt)) {
             this->N5->Visible      = true;
             this->mCreate->Visible = true;
             this->mPlay->Visible   = true;
+            this->AdvancedUserMode = this->AdvancedUserMode | 8;
          }
       }
    }
@@ -831,30 +860,20 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
 }
 //---------------------------------------------------------------------------
 
-//Takes a int as parameters and returns its value as a Byte
-Byte __fastcall TfTaipei::CustomIntToByte(int pByte)
-{
-   if(pByte > 255) return 255;
-   else if(pByte < 0) return 0;
-   else return pByte;
-}
-//---------------------------------------------------------------------------
-
 //Inverts the RGB color values of a bitmap given in parameter
 void __fastcall TfTaipei::Invert(Graphics::TBitmap *pBitmap)
 {
    Byte *pyx;
-   int r, g, b;
 
-   pBitmap->HandleType=bmDIB;    // allows use of ScanLine
-   pBitmap->PixelFormat=pf32bit; // 32bit the same as int so we can use int* for pixels pointer
+   pBitmap->HandleType = bmDIB; // allows use of ScanLine
+   pBitmap->PixelFormat = pf24bit;
 
    for(int y=0; y<pBitmap->Height-1; y++) {
       pyx=(Byte *)pBitmap->ScanLine[y];
-      for(int x=0; x<pBitmap->Width+9; x++) {
-         pyx[x*3]     = this->CustomIntToByte(255 -pyx[x*3]);
-         pyx[x*3 + 1] = this->CustomIntToByte(255 -pyx[x*3 + 1]);
-         pyx[x*3 + 2] = this->CustomIntToByte(255 -pyx[x*3 + 2]);
+      for(int x=0; x<pBitmap->Width-1; x++) {
+         pyx[x*3]     = (255 -pyx[x*3]);
+         pyx[x*3 + 1] = (255 -pyx[x*3 + 1]);
+         pyx[x*3 + 2] = (255 -pyx[x*3 + 2]);
       }
    }
 }

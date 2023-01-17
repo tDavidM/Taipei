@@ -554,6 +554,7 @@ private:
    int Shade;             //Shade used for the tiles edges Default=4(Gray) take value from 0 to 8 (9 position)
    int Radius;            //Preferencial search distance (not circular tho) for tiles pairs placement
                           //  Default=0(Expert)[no limit] and only one other possible value: 3=Beginner
+   int AdvancedUserMode;  //Bitmask for options made available only after pressing T or Ctrl+T or Shift+T
    bool Peek;             //Flag for Peek Mode where any visible tile can be "lifted" to reveal the tile(s) under
    bool DebugDraw;        //Flag to make every invisible tiles drawn as wirefram and tiles pairs placement algo "verbose"
    int EditLayer;         //Indicate which layer is been edited, Default=0(not in edit mode)[Normal Mode]
@@ -566,7 +567,6 @@ private:
    void InitGame(int pGameNo); //Initializes a new game using a seed given in parameter and the currently selected game mode (layout)
 
    void HideTileStep(TTile* pTile, bool pAutoPlay = false); //Called when a tile is selected, if valid, it will select a tile or match with a selected tile and test if game is done
-   Byte __fastcall TfTaipei::CustomIntToByte(int pByte);    //Takes a int as parameters and returns its value as a Byte
    void __fastcall Invert(Graphics::TBitmap *pBitmap);      //Inverts the RGB color values of a bitmap given in parameter
    void DrawTile(int pId, bool pSel, int pRealX, int pRealY,
                  bool pNotch = false, int pDebug = 0);      //Draws a tile with a graphic according to the given parameters (Called by DrawAllTiles )
@@ -582,7 +582,7 @@ private:
    void AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB,
                         int pDelta, int& pSpecGraph1, int& pSpecGraph2); //Takes the basic Type and Graph values from FillStructure() to a tile and handles specials cases/tiles
 
-   bool TestIfValid(int Mode);                                  //Tests if a custom layout can produce an valid game
+   bool TestIfValid(int Mode);                              //Tests if a custom layout can produce a valid game
 
 public:
    __fastcall TfTaipei(TComponent* Owner);
