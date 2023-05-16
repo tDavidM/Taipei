@@ -1,10 +1,105 @@
 //---------------------------------------------------------------------------
 #include "MainTaipei.h"
 //---------------------------------------------------------------------------
-
+#define TILESIZE       36  // Horizontal pixel width of a tile
+#define HALFTILESIZE   18  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
+#define TILEXOFFSET    5   // Pixel horizontal offset for the high-angle isometric perspective
+#define TILEYOFFSET    3   // Pixel vertical offset for the high-angle isometric perspective
 #define MAXNUMBERLAYER 7   // Theres only 7 layers
 #define GAMEWIDTH      31  // Horizontal width of the game grid
 #define GAMEHEIGHT     17  // Vertical height of the game grid
+//---------------------------------------------------------------------------
+
+//Senses cursor mouvements in the game editor area
+void __fastcall TfTaipei::FormMouseMoveEditor(TObject *Sender, TShiftState Shift,
+   int X, int Y)
+{
+   TTile* CurrentTile;
+   TPoint Pos;
+
+   Pos.x = X;
+   Pos.y = Y;
+
+   CurrentTile = this->GetTile(Pos, this->EditLayer-1);
+   if (CurrentTile != NULL) {
+      if (CurrentTile != this->SelectedTile) {
+         //Toggle the tile under the cursor to wireframe, only if not visible
+         if(this->SelectedTile != NULL)
+            this->SelectedTile->WireFrame = false;
+
+         if (!CurrentTile->Visible) {
+            CurrentTile->WireFrame = true;
+            this->SelectedTile = CurrentTile;
+            this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":";
+            this->Repaint();
+         }
+      }
+   }
+}
+//---------------------------------------------------------------------------
+
+//Senses cursor clicks in the game editor area
+void __fastcall TfTaipei::FormMouseDownEditor(TObject *Sender, TMouseButton Button,
+   TShiftState Shift, int X, int Y)
+{
+   TTile* CurrentTile;
+   TPoint Pos;
+   int TileCmp = 0;
+   bool Found = false;
+
+   Pos.x = X;
+   Pos.y = Y;
+
+   if (this->EditTileCmp < 144) { //Edit Layout Mode, and not already to many tiles
+      //Tile clicked on toggles(Left/Right button) between visibility and wireframe
+      if(Button == mbLeft) {
+         if (this->SelectedTile != NULL) {
+            this->SelectedTile->WireFrame = false;
+            this->SelectedTile->Visible = true;
+            this->SelectedTile->Selected = true;
+            this->Repaint();
+            Sleep(75);
+            this->SelectedTile->Selected = false;
+            this->SelectedTile = NULL;
+         }
+      } else if (Button == mbRight) {
+         CurrentTile = this->GetTile(Pos);
+         if (CurrentTile == NULL ) {
+               //For cases where basic GetTile struggles
+               Pos.x = ((Pos.x - 8) - (this->EditLayer-1 * TILEXOFFSET)) / HALFTILESIZE;
+               Pos.y = ((Pos.y - 6) + (this->EditLayer-1 * TILEYOFFSET)) / HALFTILESIZE;
+               CurrentTile = this->TileList;
+               while(CurrentTile != NULL && !Found) {
+               if (   CurrentTile->X <= Pos.x && CurrentTile->Y <= Pos.y
+                   && CurrentTile->X+1 >= Pos.x && CurrentTile->Y+1 >= Pos.y
+                   && CurrentTile->Z == this->EditLayer-1
+                   && CurrentTile->Visible)
+                  Found = true;
+               else
+                  CurrentTile = CurrentTile->Next;
+            }
+         }
+
+         if (CurrentTile != NULL ) {
+            CurrentTile->Selected = true;
+            this->Repaint();
+            Sleep(75);
+            CurrentTile->Selected = false;
+            CurrentTile->Visible = false;
+         }
+      }
+
+      CurrentTile = this->TileList;
+      while(CurrentTile != NULL ) {
+         if (CurrentTile->Visible)
+            TileCmp++;
+         CurrentTile = CurrentTile->Next;
+      }
+      this->EditTileCmp = TileCmp;
+      this->lNbTileLayout->Caption = IntToStr(TileCmp);
+      this->Repaint();
+   }
+}
 //---------------------------------------------------------------------------
 
 //Saves a current game/layout state to a file
@@ -184,7 +279,7 @@ void __fastcall TfTaipei::mCreateClick(TObject *Sender)
    this->lMainTitle->Visible = false;
    this->StepBack = 0;
    this->GamedDone = 0;
-   this->HintLoop = 0;
+   this->HintLoopMain = NULL;
    this->SelectedTile = NULL;
    this->GameNumber = 0;
    this->Caption = "Taipei Create/Edit Layout";
@@ -219,6 +314,12 @@ void __fastcall TfTaipei::mCreateClick(TObject *Sender)
    this->EditLayer = 1;
    this->EditTileCmp = 0;
    this->lNbTileLayout->Caption = "0";
+
+
+
+   this->OnMouseMove = FormMouseMoveEditor;
+   this->OnMouseDown = FormMouseDownEditor;
+   //fTaipei->OnMouseMove
 }
 //---------------------------------------------------------------------------
 
@@ -232,6 +333,10 @@ void __fastcall TfTaipei::mExitLayoutClick(TObject *Sender)
    this->EditLayer = 0;
    this->lNbTileLayout->Visible = false;
    this->Menu = mMenu;
+
+   this->OnMouseMove = FormMouseMove;
+   this->OnMouseDown = FormMouseDown;
+   //fTaipei->OnMouseMove
 
    //Empty previous tile list
    while(this->TileList != NULL) {
@@ -496,6 +601,10 @@ void __fastcall TfTaipei::mTestLayoutClick(TObject *Sender)
       this->EditLayer = 0;
       this->lNbTileLayout->Visible = false;
       this->Menu = mMenu;
+
+      this->OnMouseMove = FormMouseMove;
+      this->OnMouseDown = FormMouseDown;
+      //fTaipei->OnMouseMove
 
       //Empty previous tile list
       while(this->TileList != NULL) {

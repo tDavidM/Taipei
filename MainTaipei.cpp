@@ -90,6 +90,7 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
    this->Peek = false;
    this->EditLayer = 0;
    this->AdvancedUserMode = 0;
+   this->MsgNo = 0;
 
    this->TileList     = NULL;
    this->SelectedTile = NULL;
@@ -293,7 +294,7 @@ void __fastcall TfTaipei::mStartOverClick(TObject *Sender)
          CurrentTile = CurrentTile->Next;
       }
       this->StepBack = 0;
-      this->HintLoop = 0;
+      this->HintLoopMain = NULL;
       this->GamedDone = 0;
       this->Repaint();
    }
@@ -320,7 +321,7 @@ void __fastcall TfTaipei::mBackupClick(TObject *Sender)
          }
          CurrentTile = CurrentTile->Next;
       }
-      this->HintLoop = 0;
+      this->HintLoopMain = NULL;
       this->Repaint();
    }
 }
@@ -376,7 +377,7 @@ void TfTaipei::InitGame(int pGameNo)
    this->lMainTitle->Visible = false;
    this->StepBack = 0;
    this->GamedDone = 0;
-   this->HintLoop = 0;
+   this->HintLoopMain = NULL;
    this->SelectedTile = NULL;
    this->GameNumber = pGameNo;
    this->Caption = "Taipei Game  #" + IntToStr(pGameNo);
@@ -387,15 +388,31 @@ void TfTaipei::InitGame(int pGameNo)
 }
 //---------------------------------------------------------------------------
 
+//Get next available tile for hint
+TTile* TfTaipei::GetNextHintTile(TTile* pStartingTile, int pType)
+{
+   bool ItsFound = false;
+
+   while(pStartingTile != NULL && !ItsFound) {
+      if (pStartingTile->Visible &&
+          (pType == -1 || pStartingTile->Type == pType) &&
+          this->IsTileFree(pStartingTile))
+         ItsFound = true;
+      else
+         pStartingTile = pStartingTile->Next;
+   }
+   return pStartingTile;
+}
+
+//---------------------------------------------------------------------------
+
 //suggests a pair of matching tiles from the available tiles at the current game state, can be called sequentially to show all matchs
 void __fastcall TfTaipei::mHintClick(TObject *Sender)
 {
-   TTile* CurrentTile;
    TTile* StartingTile = NULL;
-   TTile* SelectTile = NULL;
-   bool GiveUp = false;
-   bool TryNext = false;
-   int LoopCmp = 144;
+   TTile* FollowingTile = NULL;
+   bool TryNext;
+   int LoopCmp = 0;
 
    this->tAutoPlay->Enabled = false;
    this->mAutoPlay->Checked = false;
@@ -406,78 +423,50 @@ void __fastcall TfTaipei::mHintClick(TObject *Sender)
       this->SelectedTile = NULL;
    }
 
-   if (this->HintLoop == 0)
-      this->HintLoop = this->TileList->Id;
+   //If HintLoopMain not yet initialized (at the beginning of the game and after every step)
+   if (this->HintLoopMain == NULL) {
+      //Find the first available tile
+      this->HintLoopMain   = GetNextHintTile(this->TileList);
+      if (this->HintLoopMain != NULL)
+         this->HintLoopSecond = GetNextHintTile(this->HintLoopMain->Next, this->HintLoopMain->Type);
+   }
+   StartingTile  = this->HintLoopMain;
+   FollowingTile = this->HintLoopSecond;
 
    //Just a quick test in case
-   CurrentTile = this->TileList;
-   while(CurrentTile != NULL) {
-      if (CurrentTile->Id == this->HintLoop) {
-         StartingTile = CurrentTile;
-         CurrentTile = NULL;
-      } else
-         CurrentTile = CurrentTile->Next;
-   }
+   if (StartingTile != NULL) {
+      do {
+         //FailSafe counter
+         LoopCmp++;
 
-   if (StartingTile == NULL)
-      StartingTile = this->TileList;
-
-   //Might need more than one try
-   do {
-      //prevent infinite loop
-      if (StartingTile == this->TileList)
-         GiveUp = true;
-
-      TryNext = false;
-      //Find the next available tile
-      CurrentTile = StartingTile;
-      while(CurrentTile != NULL) {
-         if (CurrentTile->Visible && this->IsTileFree(CurrentTile)) {
-            this->HintLoop = CurrentTile->Id;
-            this->SelectedTile = CurrentTile;
-            CurrentTile = NULL;
-         } else
-            CurrentTile = CurrentTile->Next;
-      }
-      if (this->SelectedTile != NULL) {
-         GiveUp = false;
-         this->SelectedTile->Selected = true;
-         SelectTile = NULL;
-         //Select the matching available tile of the same type
-         CurrentTile = this->SelectedTile->Next;
-         while(CurrentTile != NULL) {
-            if (CurrentTile->Visible && CurrentTile->Type == this->SelectedTile->Type &&
-                 this->IsTileFree(CurrentTile)) {
-               SelectTile = CurrentTile;
-               SelectTile->Selected = true;
-               CurrentTile = NULL;
-            } else
-               CurrentTile = CurrentTile->Next;
-         }
-         if (SelectTile == NULL) {
-            this->SelectedTile->Selected = false;
-            StartingTile = this->SelectedTile->Next;
-            this->SelectedTile = NULL;
-            TryNext = true;
-         } else {
+         //If match exists
+         if (FollowingTile != NULL) {
+            //Show hint
+            StartingTile->Selected = true;
+            FollowingTile->Selected = true;
             this->Repaint();
             Sleep(100);
-            this->HintLoop = this->SelectedTile->Next->Id;
-            SelectTile->Selected = false;
-            this->SelectedTile->Selected = false;
-            this->SelectedTile = NULL;
+            StartingTile->Selected = false;
+            FollowingTile->Selected = false;
             this->Repaint();
+
+            //Select the next secondary matching available tile of the same type
+            FollowingTile = GetNextHintTile(FollowingTile->Next, StartingTile->Type);
+            TryNext = false;
+         } else {
+            //Select the next available tile and the next matching available tile of the same type
+            StartingTile  = GetNextHintTile(StartingTile->Next);
+            TryNext = true;
+            //If end of main loop is reach, skip one round
+            if (StartingTile == NULL)
+               TryNext = false;
+            else
+               FollowingTile = GetNextHintTile(StartingTile->Next, StartingTile->Type);
          }
+      } while (TryNext && LoopCmp <= 72);
 
-      } else {
-         StartingTile = this->TileList;
-         TryNext = true;
-      }
-      LoopCmp--;
-   } while(TryNext && !GiveUp && LoopCmp >= 0);
-
-   if (GiveUp || LoopCmp < 0) {
-      this->HintLoop = 0;
+      this->HintLoopMain   = StartingTile;
+      this->HintLoopSecond = FollowingTile;
    }
 }
 //---------------------------------------------------------------------------
@@ -618,40 +607,20 @@ void __fastcall TfTaipei::FormMouseMove(TObject *Sender, TShiftState Shift,
    Pos.x = X;
    Pos.y = Y;
 
-   if (this->EditLayer > 0) {
-      //Edit Layout Mode
-      CurrentTile = this->GetTile(Pos, this->EditLayer-1);
-      if (CurrentTile != NULL) {
-         if (CurrentTile != this->SelectedTile) {
-            //Toggle the tile under the cursor to wireframe, only if not visible
-            if(this->SelectedTile != NULL)
-               this->SelectedTile->WireFrame = false;
+   CurrentTile = this->GetTile(Pos);
+   if (CurrentTile != NULL) {
+      this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":" + IntToStr(CurrentTile->Hint);
 
-            if (!CurrentTile->Visible) {
-               CurrentTile->WireFrame = true;
-               this->SelectedTile = CurrentTile;
-               this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":";
-               this->Repaint();
-            }
-         }
+      if (this->Peek && CurrentTile->Z > 0 ) {
+         Screen->Cursor = crHelp;  //crHandPoint; crDrag;
+      } else {
+         if (this->IsTileFree(CurrentTile))
+            Screen->Cursor = crCross;
+         else
+            Screen->Cursor = crDefault;
       }
-   } else {
-      //Normal Mode
-      CurrentTile = this->GetTile(Pos);
-      if (CurrentTile != NULL) {
-         this->lDebug->Caption = IntToStr(CurrentTile->Id) + ":" + IntToStr(CurrentTile->Hint);
-
-         if (this->Peek && CurrentTile->Z > 0 ) {
-            Screen->Cursor = crHelp;  //crHandPoint; crDrag;
-         } else {
-            if (this->IsTileFree(CurrentTile))
-               Screen->Cursor = crCross;
-            else
-               Screen->Cursor = crDefault;
-         }
-      } else
-         Screen->Cursor = crDefault;
-   }
+   } else
+      Screen->Cursor = crDefault;
 }
 //---------------------------------------------------------------------------
 
@@ -667,116 +636,65 @@ void __fastcall TfTaipei::FormMouseDown(TObject *Sender, TMouseButton Button,
    Pos.x = X;
    Pos.y = Y;
 
-   //Normal game Mode
-   if (this->EditLayer == 0) {
-      CurrentTile = this->GetTile(Pos);
-      if (CurrentTile != NULL ) {
-         this->tAutoPlay->Enabled = false;
-         this->mAutoPlay->Checked = false;
+   CurrentTile = this->GetTile(Pos);
+   if (CurrentTile != NULL ) {
+      this->tAutoPlay->Enabled = false;
+      this->mAutoPlay->Checked = false;
 
-         //Peek Mode
-         if (this->Peek) {
-            //Tile clicked on toggles visibility for 750ms
-            CurrentTile->Visible = false;
-            this->Repaint();
-            this->Peek = false;
-            this->mPeek->Checked = false;
-            Sleep(750);
-            CurrentTile->Visible = true;
-            this->Repaint();
-         } else { //Normal Mode
-            //Tile clicked on get selected or removed
-            if (!this->IsTileFree(CurrentTile)) {
-               if (this->mMessages->Checked)
-            Application->MessageBox(L"Tiles isn't free", L"Taipei", MB_OK | MB_ICONINFORMATION);
+      //Peek Mode
+      if (this->Peek) {
+         //Tile clicked on toggles visibility for 750ms
+         CurrentTile->Visible = false;
+         this->Repaint();
+         this->Peek = false;
+         this->mPeek->Checked = false;
+         Sleep(750);
+         CurrentTile->Visible = true;
+         this->Repaint();
+      } else { //Normal Mode
+         //Tile clicked on get selected or removed
+         if (!this->IsTileFree(CurrentTile)) {
+            if (this->mMessages->Checked)
+               Application->MessageBox(L"Tiles isn't free", L"Taipei", MB_OK | MB_ICONINFORMATION);
+         } else {
+            //Select 1 tile
+            if (this->SelectedTile == NULL) {
+               CurrentTile->Selected = true;
+               this->SelectedTile = CurrentTile;
+               this->Repaint();
             } else {
-               //Select 1 tile
-               if (this->SelectedTile == NULL) {
-                  CurrentTile->Selected = true;
-                  this->SelectedTile = CurrentTile;
+               //Same tile = Deselect
+                  if(CurrentTile == this->SelectedTile) {
+                  this->SelectedTile->Selected = false;
+                  this->SelectedTile = NULL;
                   this->Repaint();
                } else {
-                  //Same tile = Deselect
-                  if(CurrentTile == this->SelectedTile) {
-                     this->SelectedTile->Selected = false;
-                     this->SelectedTile = NULL;
-                     this->Repaint();
+                  //Match tile with selection
+                  if (CurrentTile->Type == this->SelectedTile->Type){
+                     this->HideTileStep(CurrentTile, false);
                   } else {
-                     //Match tile with selection
-                     if (CurrentTile->Type == this->SelectedTile->Type){
-                        this->HideTileStep(CurrentTile, false);
-                     } else {
-                        CurrentTile->Selected = true;
-                        this->Repaint();
-                        Sleep(75);
-                        CurrentTile->Selected = false;
-                        this->Repaint();
-                        if (this->mMessages->Checked)
-                           Application->MessageBox(L"Tiles don't match", L"Taipei", MB_OK | MB_ICONINFORMATION);
+                     CurrentTile->Selected = true;
+                     this->Repaint();
+                     Sleep(75);
+                     CurrentTile->Selected = false;
+                     this->Repaint();
+                     if (this->mMessages->Checked)
+                        Application->MessageBox(L"Tiles don't match", L"Taipei", MB_OK | MB_ICONINFORMATION);
 
-                        //There's a strange rare bug where the SelectedTile is no longer visible (seen once)
-                        //  or not free yet (uncertain) and that jams the game logics, the player can't recover
-                        if (!this->SelectedTile->Visible || !this->IsTileFree(this->SelectedTile)) {
-                          //So when this situation is detected, simply deselect the invalid selection
-                          this->SelectedTile->Selected = false;
-                          this->SelectedTile = NULL;
-                          this->Repaint();
-                          //Testers did not repport using Autoplay, just regular click when the bug occurs
-                        }
+                     //There's a strange rare bug where the SelectedTile is no longer visible (seen once)
+                     //  or not free yet (uncertain) and that jams the game logics, the player can't recover
+                     if (!this->SelectedTile->Visible || !this->IsTileFree(this->SelectedTile)) {
+                        //So when this situation is detected, simply deselect the invalid selection
+                        this->SelectedTile->Selected = false;
+                        this->SelectedTile = NULL;
+                        this->Repaint();
+                        //Testers did not repport using Autoplay, just regular click when the bug occurs
                      }
                   }
                }
             }
          }
       }
-   } else if (this->EditTileCmp < 144) { //Edit Layout Mode, and not already to many tiles
-      //Tile clicked on toggles(Left/Right button) between visibility and wireframe
-      if(Button == mbLeft) {
-         if (this->SelectedTile != NULL) {
-            this->SelectedTile->WireFrame = false;
-            this->SelectedTile->Visible = true;
-            this->SelectedTile->Selected = true;
-            this->Repaint();
-            Sleep(75);
-            this->SelectedTile->Selected = false;
-            this->SelectedTile = NULL;
-         }
-      } else if (Button == mbRight) {
-         CurrentTile = this->GetTile(Pos);
-         if (CurrentTile == NULL ) {
-               //For cases where basic GetTile struggles
-               Pos.x = ((Pos.x - 8) - (this->EditLayer-1 * TILEXOFFSET)) / HALFTILESIZE;
-               Pos.y = ((Pos.y - 6) + (this->EditLayer-1 * TILEYOFFSET)) / HALFTILESIZE;
-               CurrentTile = this->TileList;
-               while(CurrentTile != NULL && !Found) {
-               if (   CurrentTile->X <= Pos.x && CurrentTile->Y <= Pos.y
-                   && CurrentTile->X+1 >= Pos.x && CurrentTile->Y+1 >= Pos.y
-                   && CurrentTile->Z == this->EditLayer-1
-                   && CurrentTile->Visible)
-                  Found = true;
-               else
-                  CurrentTile = CurrentTile->Next;
-            }
-         }
-
-         if (CurrentTile != NULL ) {
-            CurrentTile->Selected = true;
-            this->Repaint();
-            Sleep(75);
-            CurrentTile->Selected = false;
-            CurrentTile->Visible = false;
-         }
-      }
-
-      CurrentTile = this->TileList;
-      while(CurrentTile != NULL ) {
-         if (CurrentTile->Visible)
-            TileCmp++;
-         CurrentTile = CurrentTile->Next;
-      }
-      this->EditTileCmp = TileCmp;
-      this->lNbTileLayout->Caption = IntToStr(TileCmp);
-      this->Repaint();
    }
 }
 //---------------------------------------------------------------------------
@@ -794,7 +712,6 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
    TTile* CurrentTile;
    TTile* LookupTile;
    bool Found = false;
-   int MsgNo;
 
    pTile->Visible = false;
    pTile->Selected = false;
@@ -806,7 +723,7 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
 
    this->SelectedTile = NULL;
    this->StepBack++;
-   this->HintLoop = 0;
+   this->HintLoopMain = NULL;
    this->Repaint();
 
    //Test if endgame
@@ -821,8 +738,7 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
          this->tAutoPlay->Enabled = false;
          this->mAutoPlay->Checked = false;
          if (this->GamedDone <= 0) {
-            MsgNo = Random(CONGRATSIZE-1);
-            Application->MessageBox(gCongrat[MsgNo].w_str(), L"Winner'qus Fortune", MB_OK | MB_ICONEXCLAMATION);
+            Application->MessageBox(gCongrat[this->MsgNo].w_str(), L"Winner'qus Fortune", MB_OK | MB_ICONEXCLAMATION);
          }
       } else {
          this->tAutoPlay->Enabled = false;
@@ -1523,6 +1439,9 @@ void TfTaipei::FillStructure(int pSeed)
       
       Application->ProcessMessages();
    } while(StepCmp > 0);
+
+   //Set the end of game message
+   this->MsgNo = Random(CONGRATSIZE-1);
 
    //Make all tiles visible, with or without animation
    if (this->mWatchBuilds->Checked) {

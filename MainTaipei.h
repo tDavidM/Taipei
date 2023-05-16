@@ -522,8 +522,8 @@ __published:
    void __fastcall tAutoPlayTimer(TObject *Sender);    //Plays automaticly the best move from a given game state
    void __fastcall FormKeyDown(TObject *Sender, WORD &Key, TShiftState Shift);  //Senses keystrokes used as shortcuts
    void __fastcall FormMouseMove(TObject *Sender, TShiftState Shift, int X,     
-          int Y);                                                               //Senses cursor mouvements in the game area, primarily cursor over tile events
-   void __fastcall FormMouseDown(TObject *Sender, TMouseButton Button,          
+          int Y);                                      //Senses cursor mouvements in the game area, primarily cursor over tile events
+   void __fastcall FormMouseDown(TObject *Sender, TMouseButton Button,
           TShiftState Shift, int X, int Y);            //Senses cursor clicks in the game area, primarily tile selection events
    void __fastcall FormPaint(TObject *Sender);         //Calls tiles drawing procedures
 
@@ -539,6 +539,9 @@ __published:
    void __fastcall mPlayClick(TObject *Sender);        //Loads a custom layout from a file to be played
    void __fastcall mTestLayoutClick(TObject *Sender);  //Exits Edit Layout Mode and loads the current custom layout to be played
    void __fastcall mClearClick(TObject *Sender);       //Clears the current custom layout being edited/created
+
+   void __fastcall FormMouseMoveEditor(TObject *Sender, TShiftState Shift, int X, int Y); //Senses cursor mouvements in the game editor area
+   void __fastcall FormMouseDownEditor(TObject *Sender, TMouseButton Button, TShiftState Shift, int X, int Y); //Senses cursor clicks in the game editor area
 private:
    int Mode;              //Indicated tile layout selected, 0=debug, 1t o 8= hard code layout and 99=custom
    int GameNumber;        //Seed used to generate the game, 0 to 32766 ~ish
@@ -546,8 +549,6 @@ private:
    int StepBack;          //Number of steps taken, used to back/cancel a move
    int GamedDone;         //Cheating prevention messure, a player must back at least 32 moves
                           //  from a finished game to get a new "Winner'qus Fortune" message
-   int HintLoop;          //Used by the Hint functionality to keep track of which hint have been shown
-                          //  when calling Hint multiple time in a row
    int TileType[72];      //Array used to generate 72 pairs for the 35 tiles types
    int SpecialGraph1[4];  //Array used to generate 2 pairs of 4 Seasons tiles
    int SpecialGraph2[4];  //Array used to generate 2 pairs of 4 Flowers tiles
@@ -555,17 +556,23 @@ private:
    int Radius;            //Preferencial search distance (not circular tho) for tiles pairs placement
                           //  Default=0(Expert)[no limit] and only one other possible value: 3=Beginner
    int AdvancedUserMode;  //Bitmask for options made available only after pressing T or Ctrl+T or Shift+T
-   bool Peek;             //Flag for Peek Mode where any visible tile can be "lifted" to reveal the tile(s) under
-   bool DebugDraw;        //Flag to make every invisible tiles drawn as wirefram and tiles pairs placement algo "verbose"
    int EditLayer;         //Indicate which layer is been edited, Default=0(not in edit mode)[Normal Mode]
                           //  and 1 to 7 for layer 0 to 6, ...yeah, I know D:
    int EditTileCmp;       //Counter used in Edit Mode for the number of tiles in a layout
+   int MsgNo;             //End of game message index generated at the start of the game
+
+   bool Peek;             //Flag for Peek Mode where any visible tile can be "lifted" to reveal the tile(s) under
+   bool DebugDraw;        //Flag to make every invisible tiles drawn as wirefram and tiles pairs placement algo "verbose"
 
    TTile* TileList;       //Pointer to the first element/entry in the Linked List used to store tiles
    TTile* SelectedTile;   //Pointer to the selected element/entry in the Linked List used to store tiles
+   TTile* HintLoopMain;   //Both used by the Hint functionality to keep track of which hints have been shown
+   TTile* HintLoopSecond; //  when calling Hint multiple time in a row
 
    void InitGame(int pGameNo); //Initializes a new game using a seed given in parameter and the currently selected game mode (layout)
 
+   TTile* GetNextHintTile(TTile* pStartingTile,             //Get next available tile for hint
+                          int pType = -1);
    void HideTileStep(TTile* pTile, bool pAutoPlay = false); //Called when a tile is selected, if valid, it will select a tile or match with a selected tile and test if game is done
    void __fastcall Invert(Graphics::TBitmap *pBitmap);      //Inverts the RGB color values of a bitmap given in parameter
    void DrawTile(int pId, bool pSel, int pRealX, int pRealY,
