@@ -488,59 +488,63 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
 {
    TTile* CurrentTile = this->TileList;
    TTile* SelectTile = NULL;
-   int MinHint = 72;
+   int MinHint   = 72;
+   int FloorHint = 0;
+   int MaxLoop   = 72;
 
    if (this->SelectedTile != NULL) {
       this->SelectedTile->Selected = false;
       this->SelectedTile = NULL;
    }
 
-   //Find the lowest Hint value from all free and visible tiles and select it
-   while(CurrentTile != NULL) {
-      if (CurrentTile->Visible && CurrentTile->Hint < MinHint && this->IsTileFree(CurrentTile)) {
-         MinHint = CurrentTile->Hint;
-         this->SelectedTile = CurrentTile;
-      }
-      CurrentTile = CurrentTile->Next;
-   }
-   if (this->SelectedTile != NULL)
-      this->SelectedTile->Selected = true;
-   else {
-      //Rare Case
+   //May take multiple tries
+   do {
+      //Find the lowest Hint value from all free and visible tiles and select it
       while(CurrentTile != NULL) {
-         if (CurrentTile->Visible && CurrentTile->Hint == MinHint && this->IsTileFree(CurrentTile)) {
+         if (CurrentTile->Visible && CurrentTile->Hint <= MinHint && CurrentTile->Hint > FloorHint &&
+              this->IsTileFree(CurrentTile)) {
             MinHint = CurrentTile->Hint;
             this->SelectedTile = CurrentTile;
-            this->SelectedTile->Selected = true;
-            CurrentTile = NULL;
-         } else
-            CurrentTile = CurrentTile->Next;
-      }
-   }
-
-   //Select the matching tile with lowest Hint value if possible
-   CurrentTile = this->TileList;
-   while(CurrentTile != NULL) {
-      if (CurrentTile->Visible && CurrentTile->Hint == MinHint &&
-           CurrentTile->Id != this->SelectedTile->Id && this->IsTileFree(CurrentTile)) {
-        CurrentTile->Selected = true;
-        SelectTile = CurrentTile;
-      }
-     CurrentTile = CurrentTile->Next;
-   }
-
-   //Select the next lowest tile available of the same type
-   if (SelectTile == NULL) {
-      CurrentTile = this->TileList;
-      while(CurrentTile != NULL) {
-         if (CurrentTile->Visible && CurrentTile->Hint != MinHint &&
-              CurrentTile->Type == this->SelectedTile->Type && this->IsTileFree(CurrentTile)) {
-            SelectTile = CurrentTile;
-            SelectTile->Selected = true;
          }
          CurrentTile = CurrentTile->Next;
       }
-   }
+      if (this->SelectedTile != NULL)
+         this->SelectedTile->Selected = true;
+
+      //Select the matching tile with lowest Hint value if possible
+      CurrentTile = this->TileList;
+      while(CurrentTile != NULL) {
+         if (CurrentTile->Visible && CurrentTile->Hint == MinHint &&
+              CurrentTile->Id != this->SelectedTile->Id && this->IsTileFree(CurrentTile)) {
+            SelectTile = CurrentTile;
+            SelectTile->Selected = true;
+         }
+        CurrentTile = CurrentTile->Next;
+      }
+
+      //Select the other tile available of the same type if possible
+      if (SelectTile == NULL) {
+         CurrentTile = this->TileList;
+         while(CurrentTile != NULL) {
+            if (CurrentTile->Visible && CurrentTile->Hint != MinHint &&
+                 CurrentTile->Type == this->SelectedTile->Type && this->IsTileFree(CurrentTile)) {
+               SelectTile = CurrentTile;
+               SelectTile->Selected = true;
+            }
+            CurrentTile = CurrentTile->Next;
+         }
+      }
+
+      //If no match found, try again with the the next "lowest" that is greater than this one
+      if (SelectTile == NULL) {
+         FloorHint = MinHint;
+         MinHint = 72;
+         MaxLoop--;
+         this->SelectedTile->Selected = false;
+         this->SelectedTile = NULL;
+         CurrentTile = this->TileList;
+      }
+   } while(MaxLoop > 0 && SelectTile == NULL) ;
 
    if (SelectTile != NULL) {
       this->Repaint();
@@ -892,6 +896,9 @@ void TfTaipei::DrawAllTiles(void)
             IndNotch = false;
 
          this->DrawTile(CurrentTile->Graph, CurrentTile->Selected, RealX, RealY, IndNotch, CurrentTile->Debug);
+
+         if (this->DebugDraw)
+            this->Canvas->TextOutA(RealX+2, RealY+2, IntToStr(CurrentTile->Hint));
       } else if (CurrentTile->WireFrame || this->DebugDraw) {
          //WireFrame Mode (LineTo)
          if (CurrentTile->WireFrame)
