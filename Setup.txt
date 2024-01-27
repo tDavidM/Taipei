@@ -1,0 +1,144 @@
+-CPU
+ 8 bits operations
+ 16 bits instructions
+ 11 x 8 bits general purpose registers
+ 26 instructions
+ 1 cycle per instruction
+
+-ROM/Program Memory 
+ 16 bits/pins instructions (CPU input pins 1-16)
+ *Relative addresss
+  8 bits/pins adresses (CPU output pins 51-58)
+  1 pin for Ready Next (CPU output pins 50)
+  128 foward and 128 backward (ex.: 10000000 = next, 00000000 = 128 backward, 11111111 = 128 foward, no address for current line )
+  Circular Memory (wrapped around at begin and end)
+  Trigered by rising edge of Ready Next Flag with No delay
+ *Adbsolute address
+  16 bits/pins adresses (CPU output pins 51-58 (low) + 71-78 (high))
+  1 pin for Ready Next (CPU output pins 60)
+  Trigered by rising edge of Ready Next Flag with No delay
+
+-RAM
+ 256 pages of 256 values (not yet implemented)
+ 8 bits addresses and storage
+ 2 pin for Read or Write Flags (CPU output pins 40 and 30 respectively)
+ 8 bits/pins input paired with 8 bits/pins address output (CPU output pins 21-28) (CPU input pins 41-48)
+ 8 bits/pins output paired with 8 bits/pins address output (CPU output pins 21-28) (CPU output pins 31-38)
+ Trigered by Read or Write Flags with No delay
+ Current page set by the value of register B
+ 
+Instruction word format: AAAABBBBCCCCDDDD
+$ - for registers location.
+# - for ROM location.
+@ - for RAM location.
+
+Op-Codes (A [B [C]]): 
+0000 - SET(BC)->$D                     //BC specifies a fixed value
+0001 - READ(@BC)->$D                   //BC specifies 8 bits address to fetch value from RAM to store in $D
+0010 - WRITE(@BC)<-$D                  //BC specifies 8 bits address to store value to RAM from $D
+0011 -??? IFNOTZERO($B)goto#CD         //Branches if $B != 0, Goto relative 8 bits address CD
+0100 - IFZERO($B)goto#CD               //Branches if $B == 0, Goto relative 8 bits address CD
+0101 -??? SKIPIF($B=CD)                //Skip the following instruction if $B == CD
+0110 - ADD($B+$C)->$D
+0111 - SUBTRACT($B-$C)->$D
+1000 - AND($B&$C)->$D
+1001 - OR($B|$C)->$D
+1010 - XOR($Bx$C)->$D
+1011 -??? WIDEJUMP()goto#0000+BCD      //goto absolute 16 bits address 0000+BCD (limited range, first 4K of ROM)
+1100 -??? WRITE(@$B)<-CD               //write CD to RAM at address $B
+1101 -??? GREATEST($B,$C)->$D          //set $D to the greatest value betweem $B and $C
+1110 -??? WIDEJUMP()goto#$B+CD"        //goto absolute 16 bits address $B+CD (full 64K range)
+
+1111 0000 - NOT($C)->$D
+1111 0001 - LEFTSHIFT($C)->$D
+1111 0010 - LEFTROTATE($C)->$D         //circular
+1111 0011 - RIGHTSHIFT($C)->$D         //logical shift(insert zero)
+1111 0100 - RIGHTROTATE($C)->$D        //circular
+1111 0101 -?? SKIPEQUAL($C=$D)         //Skip the following instruction if $C == $D
+1111 0110 - JUMP()goto#CD              //Goto relative 8 bits address CD
+1111 0111 - READ(@$C)->$D              //fetch value from RAM at $C to store in $D
+1111 1000 - WRITE(@$C)<-$D             //write $D to RAM at address $C
+1111 1001 -?? SKIPGREATER($C>$D)       //Skip the following instruction if $C > $D
+1111 1010 -?? IFZERO($C)goto#$D        //Branches if $C == 0, Goto relative 8 bits address at $D
+1111 1011 -??? WIDEJUMP()goto#$C$D     //goto absolute 16 bits address $C$D (full 64K range)
+1111 1100 -?? LEFTCRROT($C)->$D        //through carry
+1111 1101 -?? RIGHTCRROT($C)->$D       //through carry
+1111 1110 -?? RIGHTARSHT($C)->$D       //arithmetic shift(insert one)
+
+1111 1111 0000 -? JUMP()goto#$D        //Goto relative address at $D
+1111 1111 0001 -? CARRYFLG()->$D       //Output the value of the carry flag on a register
+1111 1111 0010 -?? RESETCARRY()
+1111 1111 0011 -?? SETCARRY()
+1111 1111 0100 -? INC($D)              //Increment $D by 1 and stores the result in $D
+1111 1111 0101 -? DEC($D)              //Decrement $D by 1 and stores the result in $D
+1111 1111 0110 -?? SKIPZERO($D)        //Skip the following instruction if $D == 0
+1111 1111 0111 -?? RAND()->$D
+1111 1111 1000 -??? SKIPNOTZERO($D)    //Skip the following instruction if $D != 0
+1111 1111 1001 -??? SKIPNOTCARRY($D)   //Skip the following instruction if carry flag set
+1111 1111 1010 -??? DECSKIPNOTZERO($D) //skip the following instruction if $D == 0, otherwise decrement $D by 1 if != 0
+1111 1111 1011 - Unused
+1111 1111 1100 - Unused
+1111 1111 1101 - Unused
+1111 1111 1110 - Unused
+1111 1111 1111 - NOP()
+
+
+
+ToDo/Idea:
+Add TagNode/Hint in Simulation
+Erase all registers with Set() any value to register F
+improve carryflag on substraction 
+
+Tricks
+Copy($B)->$D accomplished with AND($B,$C)->$D where $B and $C are the same location
+Erase()->$D accomplished with XOR($B,$C)->$D where $B and $C are the same location
+Erase all registers with Set() any value to register F
+Trigger a debug halt with Set() any value to register E
+
+Paterns
+-End program to avoid program starting back at the first location 
+ With:
+ SET(0)->$0           //Value to test
+ NOP()                //Optional
+ IFZERO($0)#b_01111111 //Last location
+ 
+-Emulate RightArithSh($1)->$2
+ With:               //Note, $1 original value is conserved
+ SET(b_10000000)->$3 //MSB mask
+ AND($1,$3)->$3      //Copy value of MSB
+ RIGHTSH($1)->$2     //RShift MSB become 0
+ OR($2,$3)->$2       //MSB injected
+
+-Emulate Greater($1,$2)->#X
+ With:
+ AND($1,$2)->$3 //Next 3 lines detect for each bit of $1 = 1 where $2 = 0
+ XOR($1,$3)->$3
+ NOT($2)->$4
+ AND($3,$4)->$3 //Now $3 = 0 if least or = 255 if equal or any other value for greater
+ AND($3,$3)->$4 //Copy $3 in $4
+ LEFTSH($4)->$4 //Next 3 lines detect case where $3 = 255
+ NOT($4)->$4
+ AND($3,$4)->$3
+ IFZERO($3)#NOTGREATER
+ JUMP()#GREATER 
+ 
+-Emulate Greater($1,$2)->#X GreaterEqual($1,$2)->#X Least($1,$2)->#X LeastEqual($1,$2)->#X
+ With:                //Warning, $1 and $2 original values aren't conserved, store elsewhere if needed
+ SUBTRACT($1-$2)->$3  //
+ IFZERO($3)#EQUAL   //If $1 = $2, $1-$2 = 0
+ IFZERO($1)#LEAST   //If $1 = 0, $1 is not greater
+ DEC($1)->$1          //decrement both values
+ DEC($2)->$2          //To see which one reach zero first
+ IFZERO($2)#GREATER //If $2 = 0, $1 is greater
+ JUMP()#b_01111011  // = 4 backward, complementary of 10000100 = 4 foward
+ 
+-Emulate Multiply($1*$2)->$3
+ With:               //Note, $1 and $2 original value are conserved
+ SET(0)->$3          //Just in case any factor is 0
+ IFZERO($1)#END    //Multiplication by 0, nothing to do
+ IFZERO($2)#END    //Multiplication by 0, nothing to do
+ AND($1,$1)->$4      //Copy factor $1 in loop counter $4 
+ ADD($2,$3)->$3      //Add $2 to total
+ DEC($4)->$4         //Reduce counter $4 until done
+ IFZERO($4)#END    //Loop $1 time
+ JUMP()#b_01111101 // = 3 backward, complementary of 10000010 = 3 foward
