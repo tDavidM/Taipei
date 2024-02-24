@@ -1,13 +1,11 @@
 //---------------------------------------------------------------------------
 #include "MainTaipei.h"
 //---------------------------------------------------------------------------
-#define TILESIZE       36  // Horizontal pixel width of a tile
-#define HALFTILESIZE   18  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
-#define TILEXOFFSET    5   // Pixel horizontal offset for the high-angle isometric perspective
-#define TILEYOFFSET    3   // Pixel vertical offset for the high-angle isometric perspective
+
+//Redefined from MainTaipei.cpp
 #define MAXNUMBERLAYER 7   // Theres only 7 layers
-#define GAMEWIDTH      31  // Horizontal width of the game grid
-#define GAMEHEIGHT     17  // Vertical height of the game grid
+#define GAMEWIDTH      62  // Horizontal width of the game grid
+#define GAMEHEIGHT     34  // Vertical height of the game grid
 //---------------------------------------------------------------------------
 
 //Senses cursor mouvements in the game editor area
@@ -148,7 +146,7 @@ void __fastcall TfTaipei::mSaveClick(TObject *Sender)
 
              VisTile = XmlRoot->CreateElement("Visible", "");
              Tile->ChildNodes->Add(VisTile);
-             if(CurrentTile->Visible == true)
+             if (CurrentTile->Visible)
                 VisTile->Text = "True";
              else
                 VisTile->Text = "False";

@@ -4,8 +4,8 @@
 #pragma hdrstop
 #include <tchar.h>
 //---------------------------------------------------------------------------
-USEFORM("MainTaipei.cpp", fTaipei);
 USEFORM("SelGame.cpp", fSelectGame);
+USEFORM("MainTaipei.cpp", fTaipei);
 //---------------------------------------------------------------------------
 WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {

@@ -16,10 +16,26 @@
 #pragma resource "*.dfm"
 TfTaipei *fTaipei;
 
-#define TILESIZE       36  // Horizontal pixel width of a tile
-#define HALFTILESIZE   18  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
-#define TILEXOFFSET    5   // Pixel horizontal offset for the high-angle isometric perspective
-#define TILEYOFFSET    3   // Pixel vertical offset for the high-angle isometric perspective
+//Sizes at zoom factor 100
+#define TILESIZE_100       36  // Horizontal pixel width of a tile
+#define HALFTILESIZE_100   18  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
+#define TILEXOFFSET_100    5   // Pixel horizontal offset for the high-angle isometric perspective
+#define TILEYOFFSET_100    3   // Pixel vertical offset for the high-angle isometric perspective
+
+//Sizes at zoom factor 150
+#define TILESIZE_150       54  // Horizontal pixel width of a tile
+#define HALFTILESIZE_150   27  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
+#define TILEXOFFSET_150    7   // Pixel horizontal offset for the high-angle isometric perspective
+#define TILEYOFFSET_150    4   // Pixel vertical offset for the high-angle isometric perspective
+
+//Sizes at zoom factor 200
+#define TILESIZE_200       72  // Horizontal pixel width of a tile
+#define HALFTILESIZE_200   36  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
+#define TILEXOFFSET_200    10   // Pixel horizontal offset for the high-angle isometric perspective
+#define TILEYOFFSET_200    6   // Pixel vertical offset for the high-angle isometric perspective
+
+
+//Those don't scale (check Redefined in EditorCode.cpp)
 #define MAXNUMBERLAYER 7   // Theres only 7 layers
 #define GAMEWIDTH      31  // Horizontal width of the game grid
 #define GAMEHEIGHT     17  // Vertical height of the game grid
@@ -74,6 +90,14 @@ void __fastcall TfTaipei::mExitClick(TObject *Sender)
 //Initialises form's default values and read command line call parameters
 void __fastcall TfTaipei::FormCreate(TObject *Sender)
 {
+   this->mlTiles->SetSize(36,36);
+   this->mlTiles->ResourceLoad(rtBitmap, "TILE_100_ALL", clWhite);
+   this->ZoomFactor = 100;
+   this->TILESIZE     = TILESIZE_100;
+   this->HALFTILESIZE = HALFTILESIZE_100;
+   this->TILEXOFFSET  = TILEXOFFSET_100;
+   this->TILEYOFFSET  = TILEYOFFSET_100;
+
    bool OpenResult;
    TRegistry* Reg = new TRegistry(KEY_READ);
 
@@ -95,6 +119,7 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
    this->TileList     = NULL;
    this->SelectedTile = NULL;
 
+   this->ClientWidth = 570;
    this->ClientHeight = 310;
 
    OutputDebugString("Taipei.exe\nParams: \n  -d debug mode\n  -m no messages\n");
@@ -145,21 +170,6 @@ void __fastcall TfTaipei::mMessagesClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-//Toggles between color and black&white tile graphs
-void __fastcall TfTaipei::mColorClick(TObject *Sender)
-{
-   this->mColor->Checked = !this->mColor->Checked;
-   this->Repaint();
-}
-//---------------------------------------------------------------------------
-
-//Toggles tile heap build animation
-void __fastcall TfTaipei::mWatchBuildsClick(TObject *Sender)
-{
-   this->mWatchBuilds->Checked = !this->mWatchBuilds->Checked;
-}
-//---------------------------------------------------------------------------
-
 //Shows a system MessageBox with infos about Taipei
 void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 {
@@ -206,6 +216,109 @@ void __fastcall TfTaipei::mStrategyClick(TObject *Sender)
                        "3.  Work from the outside in.";
 
    Application->MessageBox(DialogText.w_str(), L"Strategy", MB_OK); // MB_HELP
+}
+//---------------------------------------------------------------------------
+
+//Change zoom to 100%
+void __fastcall TfTaipei::m_100pClick(TObject *Sender)
+{
+   this->m_100p->Checked = true;
+   this->m_150p->Checked = false;
+   this->m_200p->Checked = false;
+
+   this->mlTiles->Clear();
+   this->mlTiles->SetSize(36,36);
+   if (this->mColor->Checked)
+      this->mlTiles->ResourceLoad(rtBitmap, "TILE_100_ALL", clWhite);
+   else
+      this->mlTiles->ResourceLoad(rtBitmap, "TILE_100_ALL_B", clWhite);
+   this->ZoomFactor   = 100;
+   this->ClientWidth  = 570;
+   this->ClientHeight = 310;
+
+   this->TILESIZE     = TILESIZE_100;
+   this->HALFTILESIZE = HALFTILESIZE_100;
+   this->TILEXOFFSET  = TILEXOFFSET_100;
+   this->TILEYOFFSET  = TILEYOFFSET_100;
+
+   this->Invalidate();
+}
+//---------------------------------------------------------------------------
+
+//Change zoom to 150%
+void __fastcall TfTaipei::m_150pClick(TObject *Sender)
+{
+   this->m_100p->Checked = false;
+   this->m_150p->Checked = true;
+   this->m_200p->Checked = false;
+
+   this->mlTiles->Clear();
+   this->mlTiles->SetSize(54,54);
+   if (this->mColor->Checked)
+      this->mlTiles->ResourceLoad(rtBitmap, "TILE_150_ALL", clWhite);
+   else
+      this->mlTiles->ResourceLoad(rtBitmap, "TILE_150_ALL_B", clWhite);
+   this->ZoomFactor   = 150;
+   this->ClientWidth  = 855;
+   this->ClientHeight = 465;
+
+   this->TILESIZE     = TILESIZE_150;
+   this->HALFTILESIZE = HALFTILESIZE_150;
+   this->TILEXOFFSET  = TILEXOFFSET_150;
+   this->TILEYOFFSET  = TILEYOFFSET_150;
+
+   this->Invalidate();
+}
+//---------------------------------------------------------------------------
+
+//Change zoom to 200%
+void __fastcall TfTaipei::m_200pClick(TObject *Sender)
+{
+   this->m_100p->Checked = false;
+   this->m_150p->Checked = false;
+   this->m_200p->Checked = true;
+
+   this->mlTiles->Clear();
+   this->mlTiles->SetSize(72,72);
+   if (this->mColor->Checked)
+      this->mlTiles->ResourceLoad(rtBitmap, "TILE_200_ALL", clWhite);
+   else
+      this->mlTiles->ResourceLoad(rtBitmap, "TILE_200_ALL_B", clWhite);
+   this->ZoomFactor   = 200;
+   this->ClientWidth  = 1140;
+   this->ClientHeight = 620;
+
+   this->TILESIZE     = TILESIZE_200;
+   this->HALFTILESIZE = HALFTILESIZE_200;
+   this->TILEXOFFSET  = TILEXOFFSET_200;
+   this->TILEYOFFSET  = TILEYOFFSET_200;
+
+   this->Invalidate();
+}
+//---------------------------------------------------------------------------
+
+//Toggles between color and black&white tile graphs
+void __fastcall TfTaipei::mColorClick(TObject *Sender)
+{
+   this->mColor->Checked = !this->mColor->Checked;
+
+   if (this->m_100p->Checked)
+      this->m_100p->Click();
+
+   if (this->m_150p->Checked)
+      this->m_150p->Click();
+
+   if (this->m_200p->Checked)
+      this->m_200p->Click();
+
+   this->Repaint();
+}
+//---------------------------------------------------------------------------
+
+//Toggles tile heap build animation
+void __fastcall TfTaipei::mWatchBuildsClick(TObject *Sender)
+{
+   this->mWatchBuilds->Checked = !this->mWatchBuilds->Checked;
 }
 //---------------------------------------------------------------------------
 
@@ -577,6 +690,7 @@ void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
 
       if (Key == 0x54 /*VK_KEY_T*/) {
          this->mDragon->Visible      = true;
+         this->m_Zoom->Visible       = true;
          this->mWatchBuilds->Visible = true;
          this->AdvancedUserMode = this->AdvancedUserMode | 1;
          if (Shift.Contains(ssCtrl)) {
@@ -855,10 +969,7 @@ void TfTaipei::DrawTile(int pId, bool pSel, int pRealX, int pRealY, bool pNotch,
       this->Canvas->Brush->Color = clWhite;
       this->Canvas->Rectangle(pRealX, pRealY, pRealX + TILESIZE, pRealY + TILESIZE); //Top Face
 
-      if (this->mColor->Checked)
-         this->mlTiles->GetBitmap(pId, TileGraph);
-      else
-         this->mlTilesBW->GetBitmap(pId, TileGraph);
+      this->mlTiles->GetBitmap(pId, TileGraph);
 
       if(pSel)
          this->Invert(TileGraph);

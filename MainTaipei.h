@@ -422,15 +422,14 @@ class TfTaipei : public TForm
 {
 __published:
 
-   TImageList *mlTiles;            //Stores all tile's graph (color)
-   TImageList *mlTilesBW;          //Stores all tile's graph (B&W)
-   TTimer *tAutoPlay;              //
+   TImageList *mlTiles;            //Stores all tile's graph
+   TTimer *tAutoPlay;              //Timer to get a delay between AutoPlay moves
    TImage *iMainLogo;              //Main Taipei Logo image object
    TLabel *lMainTitle;             //Main Logo/title text in white transparent
    TLabel *lMainTitleShadow;       //Main Logo/title text in black with a few pixel offset to simulate a shadow
    TLabel *lNbTileLayout;          //In Edit Mode, displays the current number of tile
    TLabel *lDebug;                 //When Debug Mode is activated, displays the current tile ID and Hint value (tile under the cursor)
-   TXPManifest *XPManifest1;       //Improve the look of the form
+   TXPManifest *XPManifest;        //Improve the look of the form
    TXMLDocument *XMLDoc;           //Used to read XML files
    TSaveDialog *GameSaveDialog;    //Dialog used to save the current gamestate
    TOpenDialog *GameOpenDialog;    //Dialog used to load a previously saved gamestate
@@ -497,15 +496,22 @@ __published:
    TMenuItem *mCustom;
    TMenuItem *mEditLayout;
    TMenuItem *mDebug;
+   TMenuItem *m_Zoom;
+   TMenuItem *m_150p;
+   TMenuItem *m_200p;
+   TMenuItem *m_100p;
 
    void __fastcall mExitClick(TObject *Sender);        //Called to close the application
    void __fastcall FormCreate(TObject *Sender);        //Initialises form's default values and read command line call parameters
    void __fastcall mMessagesClick(TObject *Sender);    //Toggles contextual help/reminder messages about gameplay
-   void __fastcall mColorClick(TObject *Sender);       //Toggles between color and black&white tile graphs
-   void __fastcall mWatchBuildsClick(TObject *Sender); //Toggles tile heap build animation
    void __fastcall mAboutClick(TObject *Sender);       //Shows a system MessageBox with infos about Taipei
    void __fastcall mHowtoPlayClick(TObject *Sender);   //Shows a system MessageBox with help to play the game
    void __fastcall mStrategyClick(TObject *Sender);    //Shows a system MessageBox with strategies to play the game
+   void __fastcall m_100pClick(TObject *Sender);       //Change zoom to 100%
+   void __fastcall m_150pClick(TObject *Sender);       //Change zoom to 150%
+   void __fastcall m_200pClick(TObject *Sender);       //Change zoom to 200%
+   void __fastcall mColorClick(TObject *Sender);       //Toggles between color and black&white tile graphs
+   void __fastcall mWatchBuildsClick(TObject *Sender); //Toggles tile heap build animation
    void __fastcall mDarkenClick(TObject *Sender);      //Lowers the tile's eges brightness
    void __fastcall mLightenClick(TObject *Sender);     //Increases the tile's eges brightness
    void __fastcall mPeekClick(TObject *Sender);        //Toggles the Peek Mode used to temporarily remove any tile to have a look under
@@ -517,7 +523,7 @@ __published:
    void __fastcall mNewClick(TObject *Sender);         //Calls to Initialize a new game (by calling InitGame() ) with a random seed
    void __fastcall mSelectClick(TObject *Sender);      //Calls to Initialize a new game (by calling InitGame() ) with a seed provided by the user
 
-   void __fastcall mHintClick(TObject *Sender);        //suggests a pair of matching tiles from the available tiles at the current game state, can be called sequentially to show all matchs
+   void __fastcall mHintClick(TObject *Sender);        //Suggests a pair of matching tiles from the available tiles at the current game state, can be called sequentially to show all matchs
    void __fastcall mAutoPlayClick(TObject *Sender);    //Toggles the AutoPlay mode where the games plays a move every few seconds (see tAutoPlayTimer)
    void __fastcall tAutoPlayTimer(TObject *Sender);    //Plays automaticly the best move from a given game state
    void __fastcall FormKeyDown(TObject *Sender, WORD &Key, TShiftState Shift);  //Senses keystrokes used as shortcuts
@@ -542,6 +548,7 @@ __published:
 
    void __fastcall FormMouseMoveEditor(TObject *Sender, TShiftState Shift, int X, int Y); //Senses cursor mouvements in the game editor area
    void __fastcall FormMouseDownEditor(TObject *Sender, TMouseButton Button, TShiftState Shift, int X, int Y); //Senses cursor clicks in the game editor area
+
 private:
    int Mode;              //Indicated tile layout selected, 0=debug, 1t o 8= hard code layout and 99=custom
    int GameNumber;        //Seed used to generate the game, 0 to 32766 ~ish
@@ -563,6 +570,12 @@ private:
 
    bool Peek;             //Flag for Peek Mode where any visible tile can be "lifted" to reveal the tile(s) under
    bool DebugDraw;        //Flag to make every invisible tiles drawn as wirefram and tiles pairs placement algo "verbose"
+
+   int  ZoomFactor;       //Zoom factor used to display the game: 100, 150 or 200 (in %)
+   int  TILESIZE;         // Horizontal pixel width of a tile
+   int  HALFTILESIZE;     // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
+   int  TILEXOFFSET;      // Pixel horizontal offset for the high-angle isometric perspective
+   int  TILEYOFFSET;      // Pixel vertical offset for the high-angle isometric perspective
 
    TTile* TileList;       //Pointer to the first element/entry in the Linked List used to store tiles
    TTile* SelectedTile;   //Pointer to the selected element/entry in the Linked List used to store tiles
