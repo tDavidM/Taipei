@@ -22,6 +22,12 @@ TfTaipei *fTaipei;
 #define TILEXOFFSET_100    5   // Pixel horizontal offset for the high-angle isometric perspective
 #define TILEYOFFSET_100    3   // Pixel vertical offset for the high-angle isometric perspective
 
+//Sizes at zoom factor 125
+#define TILESIZE_125       45  // Horizontal pixel width of a tile
+#define HALFTILESIZE_125   22  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
+#define TILEXOFFSET_125    6   // Pixel horizontal offset for the high-angle isometric perspective
+#define TILEYOFFSET_125    4   // Pixel vertical offset for the high-angle isometric perspective
+
 //Sizes at zoom factor 150
 #define TILESIZE_150       54  // Horizontal pixel width of a tile
 #define HALFTILESIZE_150   27  // Since a tile covers 2 by 2 units of game grid, an half value is sometime required
@@ -90,8 +96,8 @@ void __fastcall TfTaipei::mExitClick(TObject *Sender)
 //Initialises form's default values and read command line call parameters
 void __fastcall TfTaipei::FormCreate(TObject *Sender)
 {
-   this->mlTiles->SetSize(36,36);
-   this->mlTiles->ResourceLoad(rtBitmap, "TILE_100_ALL", clWhite);
+   this->ilTiles->SetSize(36,36);
+   this->ilTiles->ResourceLoad(rtBitmap, "TILE_100_ALL", clWhite);
    this->ZoomFactor = 100;
    this->TILESIZE     = TILESIZE_100;
    this->HALFTILESIZE = HALFTILESIZE_100;
@@ -104,8 +110,11 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
    this->DoubleBuffered = true;
    Application->Icon = this->Icon;
 
-   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020-2023";
+   this->lMainTitle->Caption = "Oriental Game of Skill and Chance\nVersion 6.00\nClone by David Morrissette\n2020-2024";
    this->lMainTitleShadow->Caption = this->lMainTitle->Caption;
+
+   this->iMainLogo->Picture->Bitmap->LoadFromResourceName((int)HInstance, "TAIPEI_LOGO");
+   this->iMainLogo->Left = (this->ClientWidth - this->iMainLogo->Width) / 2;
 
    this->Mode = 1;
    this->DebugDraw = false;
@@ -130,8 +139,23 @@ void __fastcall TfTaipei::FormCreate(TObject *Sender)
 
    Reg->RootKey = HKEY_CURRENT_USER;
    OpenResult = Reg->OpenKey("Software\\tDavidM\\Taipei\\", true);
-   if(OpenResult)
+   if(OpenResult) {
       this->mMessages->Checked = Reg->ReadString("MessagesVisible") == "True";
+      String ZoomFact = Reg->ReadString("ZoomFactor");
+      if (Reg->ReadString("ZoomFactor")=="")
+         ZoomFact = "0";
+      switch ( StrToInt(ZoomFact) ) {
+         case 125:
+            this->m125p->Click();
+         break;
+         case 150:
+            this->m150p->Click();
+         break;
+         case 200:
+            this->m200p->Click();
+         break;
+      }
+   }
 	Reg->CloseKey();
 	Reg->Free();
 
@@ -174,7 +198,7 @@ void __fastcall TfTaipei::mMessagesClick(TObject *Sender)
 void __fastcall TfTaipei::mAboutClick(TObject *Sender)
 {
    String DialogText = "Taipei !\n\nOriginal by Dave Norris\n"
-					   "Clone by David Morrissette\n\n2020-2023\n\n\nPress T in main window for more options";
+					   "Clone by David Morrissette\n\n2020-2024\n\n\nPress T in main window for more options";
    String DialogCap  = "About " + this->Caption;
 
    if (this->AdvancedUserMode > 0) {
@@ -220,18 +244,19 @@ void __fastcall TfTaipei::mStrategyClick(TObject *Sender)
 //---------------------------------------------------------------------------
 
 //Change zoom to 100%
-void __fastcall TfTaipei::m_100pClick(TObject *Sender)
+void __fastcall TfTaipei::m100pClick(TObject *Sender)
 {
-   this->m_100p->Checked = true;
-   this->m_150p->Checked = false;
-   this->m_200p->Checked = false;
+   this->m100p->Checked = true;
+   this->m125p->Checked = false;
+   this->m150p->Checked = false;
+   this->m200p->Checked = false;
 
-   this->mlTiles->Clear();
-   this->mlTiles->SetSize(36,36);
+   this->ilTiles->Clear();
+   this->ilTiles->SetSize(36,36);
    if (this->mColor->Checked)
-      this->mlTiles->ResourceLoad(rtBitmap, "TILE_100_ALL", clWhite);
+      this->ilTiles->ResourceLoad(rtBitmap, "TILE_100_ALL", clWhite);
    else
-      this->mlTiles->ResourceLoad(rtBitmap, "TILE_100_ALL_B", clWhite);
+      this->ilTiles->ResourceLoad(rtBitmap, "TILE_100_ALL_B", clWhite);
    this->ZoomFactor   = 100;
    this->ClientWidth  = 570;
    this->ClientHeight = 310;
@@ -241,23 +266,107 @@ void __fastcall TfTaipei::m_100pClick(TObject *Sender)
    this->TILEXOFFSET  = TILEXOFFSET_100;
    this->TILEYOFFSET  = TILEYOFFSET_100;
 
+   if (this->iMainLogo->Visible) {
+      this->iMainLogo->Left = (this->ClientWidth - this->iMainLogo->Width) / 2;
+      this->iMainLogo->Top = 60;
+   }
+
    this->Invalidate();
+
+   bool OpenResult;
+   TRegistry* Reg = new TRegistry(KEY_WRITE);
+
+   Reg->RootKey = HKEY_CURRENT_USER;
+   OpenResult = Reg->OpenKey("Software\\tDavidM\\Taipei\\", true);
+   if(OpenResult)
+      Reg->WriteString("ZoomFactor", this->ZoomFactor);
+   Reg->CloseKey();
+   Reg->Free();
+}
+//---------------------------------------------------------------------------
+
+//Change zoom to 125%
+void __fastcall TfTaipei::m125pClick(TObject *Sender)
+{
+   Graphics::TBitmap *TileGraphSrc, *TileGraphDest;
+
+   this->m100p->Checked = false;
+   this->m125p->Checked = true;
+   this->m150p->Checked = false;
+   this->m200p->Checked = false;
+
+   this->ilTiles->Clear();
+   this->ilTiles->SetSize(45,45);
+
+   TileGraphSrc  = new Graphics::TBitmap;
+   TileGraphDest = new Graphics::TBitmap;
+
+   if (this->mColor->Checked)
+      TileGraphSrc->LoadFromResourceName((int)HInstance, "TILE_100_ALL");
+   else
+      TileGraphSrc->LoadFromResourceName((int)HInstance, "TILE_100_ALL_B");
+
+   ResizeImage(TileGraphSrc, TileGraphDest, 1.25);
+   this->ilTiles->Add(TileGraphDest,TileGraphDest);
+
+   TileGraphSrc->Free();
+   TileGraphDest->Free();
+
+   this->ZoomFactor   = 125;
+   this->ClientWidth  = 712;
+   this->ClientHeight = 387;
+
+   this->TILESIZE     = TILESIZE_125;
+   this->HALFTILESIZE = HALFTILESIZE_125;
+   this->TILEXOFFSET  = TILEXOFFSET_125;
+   this->TILEYOFFSET  = TILEYOFFSET_125;
+
+   if (this->iMainLogo->Visible) {
+      this->iMainLogo->Left = (this->ClientWidth - this->iMainLogo->Width) / 2;
+      this->iMainLogo->Top = 90;
+   }
+
+   this->Invalidate();
+
+   bool OpenResult;
+   TRegistry* Reg = new TRegistry(KEY_WRITE);
+
+   Reg->RootKey = HKEY_CURRENT_USER;
+   OpenResult = Reg->OpenKey("Software\\tDavidM\\Taipei\\", true);
+   if(OpenResult)
+      Reg->WriteString("ZoomFactor", this->ZoomFactor);
+   Reg->CloseKey();
+   Reg->Free();
 }
 //---------------------------------------------------------------------------
 
 //Change zoom to 150%
-void __fastcall TfTaipei::m_150pClick(TObject *Sender)
+void __fastcall TfTaipei::m150pClick(TObject *Sender)
 {
-   this->m_100p->Checked = false;
-   this->m_150p->Checked = true;
-   this->m_200p->Checked = false;
+   Graphics::TBitmap *TileGraphSrc, *TileGraphDest;
 
-   this->mlTiles->Clear();
-   this->mlTiles->SetSize(54,54);
+   this->m100p->Checked = false;
+   this->m125p->Checked = false;
+   this->m150p->Checked = true;
+   this->m200p->Checked = false;
+
+   this->ilTiles->Clear();
+   this->ilTiles->SetSize(54,54);
+
+   TileGraphSrc  = new Graphics::TBitmap;
+   TileGraphDest = new Graphics::TBitmap;
+
    if (this->mColor->Checked)
-      this->mlTiles->ResourceLoad(rtBitmap, "TILE_150_ALL", clWhite);
+      TileGraphSrc->LoadFromResourceName((int)HInstance, "TILE_100_ALL");
    else
-      this->mlTiles->ResourceLoad(rtBitmap, "TILE_150_ALL_B", clWhite);
+      TileGraphSrc->LoadFromResourceName((int)HInstance, "TILE_100_ALL_B");
+
+   ResizeImage(TileGraphSrc, TileGraphDest, 1.5);
+   this->ilTiles->Add(TileGraphDest,TileGraphDest);
+
+   TileGraphSrc->Free();
+   TileGraphDest->Free();
+
    this->ZoomFactor   = 150;
    this->ClientWidth  = 855;
    this->ClientHeight = 465;
@@ -267,23 +376,49 @@ void __fastcall TfTaipei::m_150pClick(TObject *Sender)
    this->TILEXOFFSET  = TILEXOFFSET_150;
    this->TILEYOFFSET  = TILEYOFFSET_150;
 
+   if (this->iMainLogo->Visible) {
+      this->iMainLogo->Left = (this->ClientWidth - this->iMainLogo->Width) / 2;
+      this->iMainLogo->Top = 120;
+   }
+
    this->Invalidate();
+
+   bool OpenResult;
+   TRegistry* Reg = new TRegistry(KEY_WRITE);
+
+   Reg->RootKey = HKEY_CURRENT_USER;
+   OpenResult = Reg->OpenKey("Software\\tDavidM\\Taipei\\", true);
+   if(OpenResult)
+      Reg->WriteString("ZoomFactor", this->ZoomFactor);
+   Reg->CloseKey();
+   Reg->Free();
 }
 //---------------------------------------------------------------------------
 
 //Change zoom to 200%
-void __fastcall TfTaipei::m_200pClick(TObject *Sender)
+void __fastcall TfTaipei::m200pClick(TObject *Sender)
 {
-   this->m_100p->Checked = false;
-   this->m_150p->Checked = false;
-   this->m_200p->Checked = true;
+   Graphics::TBitmap *TileGraphSrc, *TileGraphDest;
 
-   this->mlTiles->Clear();
-   this->mlTiles->SetSize(72,72);
+   this->m100p->Checked = false;
+   this->m125p->Checked = false;
+   this->m150p->Checked = false;
+   this->m200p->Checked = true;
+
+   this->ilTiles->Clear();
+   this->ilTiles->SetSize(72,72);
+
+   TileGraphSrc  = new Graphics::TBitmap;
+   TileGraphDest = new Graphics::TBitmap;
+
    if (this->mColor->Checked)
-      this->mlTiles->ResourceLoad(rtBitmap, "TILE_200_ALL", clWhite);
+      TileGraphSrc->LoadFromResourceName((int)HInstance, "TILE_100_ALL");
    else
-      this->mlTiles->ResourceLoad(rtBitmap, "TILE_200_ALL_B", clWhite);
+      TileGraphSrc->LoadFromResourceName((int)HInstance, "TILE_100_ALL_B");
+
+   ResizeImage(TileGraphSrc, TileGraphDest, 2);
+   this->ilTiles->Add(TileGraphDest,TileGraphDest);
+
    this->ZoomFactor   = 200;
    this->ClientWidth  = 1140;
    this->ClientHeight = 620;
@@ -293,7 +428,25 @@ void __fastcall TfTaipei::m_200pClick(TObject *Sender)
    this->TILEXOFFSET  = TILEXOFFSET_200;
    this->TILEYOFFSET  = TILEYOFFSET_200;
 
+   TileGraphSrc->Free();
+   TileGraphDest->Free();
+
+   if (this->iMainLogo->Visible) {
+      this->iMainLogo->Left = (this->ClientWidth - this->iMainLogo->Width) / 2;
+      this->iMainLogo->Top = 180;
+   }
+
    this->Invalidate();
+
+   bool OpenResult;
+   TRegistry* Reg = new TRegistry(KEY_WRITE);
+
+   Reg->RootKey = HKEY_CURRENT_USER;
+   OpenResult = Reg->OpenKey("Software\\tDavidM\\Taipei\\", true);
+   if(OpenResult)
+      Reg->WriteString("ZoomFactor", this->ZoomFactor);
+   Reg->CloseKey();
+   Reg->Free();
 }
 //---------------------------------------------------------------------------
 
@@ -302,14 +455,17 @@ void __fastcall TfTaipei::mColorClick(TObject *Sender)
 {
    this->mColor->Checked = !this->mColor->Checked;
 
-   if (this->m_100p->Checked)
-      this->m_100p->Click();
+   if (this->m100p->Checked)
+      this->m100p->Click();
 
-   if (this->m_150p->Checked)
-      this->m_150p->Click();
+   if (this->m125p->Checked)
+      this->m125p->Click();
 
-   if (this->m_200p->Checked)
-      this->m_200p->Click();
+   if (this->m150p->Checked)
+      this->m150p->Click();
+
+   if (this->m200p->Checked)
+      this->m200p->Click();
 
    this->Repaint();
 }
@@ -690,7 +846,7 @@ void __fastcall TfTaipei::FormKeyDown(TObject *Sender, WORD &Key,
 
       if (Key == 0x54 /*VK_KEY_T*/) {
          this->mDragon->Visible      = true;
-         this->m_Zoom->Visible       = true;
+         this->mZoom->Visible        = true;
          this->mWatchBuilds->Visible = true;
          this->AdvancedUserMode = this->AdvancedUserMode | 1;
          if (Shift.Contains(ssCtrl)) {
@@ -894,20 +1050,152 @@ void TfTaipei::HideTileStep(TTile* pTile, bool pAutoPlay)
 }
 //---------------------------------------------------------------------------
 
+//Used to resize tile graphs when loaded from Ressource, Compute Dest value
+// t is a value that goes from 0 to 1 to interpolate in a C1 continuous way across uniformly sampled data points.
+// when t is 0, this will return B.  When t is 1, this will return C.  Inbetween values will return an interpolation
+// between B and C.  A and B are used to calculate slopes at the edges.
+float TfTaipei::CubicHermite(float A, float B, float C, float D, float t)
+{
+   float a = -A / 2.0f + (3.0f*B) / 2.0f - (3.0f*C) / 2.0f + D / 2.0f;
+   float b =  A        - (5.0f*B) / 2.0f +  2.0f*C         - D / 2.0f;
+   float c = -A / 2.0f +       C  / 2.0f;
+ //float d =  B;
+
+   return a*t*t*t + b*t*t + c*t + B; //d
+}
+//---------------------------------------------------------------------------
+
+//Used to resize tile graphs when loaded from Ressource, Scan source, Generate Dest pixel
+Byte* TfTaipei::SampleBicubic(Graphics::TBitmap *image, float u, float v, Byte pSrcRowCache[4][TILESIZE_100*44*3])
+{
+   static Byte Out[3];
+   float x, y, xfract, yfract, Value;
+   int xint, yint, xLn, yLn, /*maxH=image->Height-1,*/ maxW=image->Width-1;
+   Byte *Row;
+   Byte Kernel[4][4][3];
+   float Col[4];
+
+   // calculate coordinates -> also need to offset by half a pixel to keep image from shifting down and left half a pixel
+   x = (u * image->Width) - 0.5;
+   xint = int(x);
+   xfract = x - floor(x);
+
+   y = (v * image->Height) - 0.5;
+   //yint = int(y);
+   yfract = y - floor(y);
+
+   //Loop on the 4 nearby horizontal line from Source image
+   for (int i=0; i<4; i++) {
+      //Avoid multipe calls to ScanLine by using Caching
+      //yLn = yint + (i-1);
+      //yLn<0 ? yLn=0 : yLn>maxH ? yLn=maxH : yLn=yLn;
+      //Row = (Byte *)image->ScanLine[yLn];
+
+      //To collect the 4 nearby pixels (3 color channels)
+      xint-1 < 0 ? xLn = 0 : xLn = (xint-1)*3;
+      Kernel[0][i][0] = pSrcRowCache[i][xLn];   //Row[xLn];
+      Kernel[0][i][1] = pSrcRowCache[i][xLn+1]; //Row[xLn+1];
+      Kernel[0][i][2] = pSrcRowCache[i][xLn+2]; //Row[xLn+2];
+
+      xLn = xint*3;
+      Kernel[1][i][0] = pSrcRowCache[i][xLn];   //Row[xLn];
+      Kernel[1][i][1] = pSrcRowCache[i][xLn+1]; //Row[xLn+1];
+      Kernel[1][i][2] = pSrcRowCache[i][xLn+2]; //Row[xLn+2];
+
+      xLn = (xint+1)*3;
+      Kernel[2][i][0] = pSrcRowCache[i][xLn];   //Row[xLn];
+      Kernel[2][i][1] = pSrcRowCache[i][xLn+1]; //Row[xLn+1];
+      Kernel[2][i][2] = pSrcRowCache[i][xLn+2]; //Row[xLn+2];
+
+      xint+2 > maxW ? xLn = maxW : xLn = (xint+2)*3;
+      Kernel[3][i][0] = pSrcRowCache[i][xLn];   //Row[xLn];
+      Kernel[3][i][1] = pSrcRowCache[i][xLn+1]; //Row[xLn+1];
+      Kernel[3][i][2] = pSrcRowCache[i][xLn+2]; //Row[xLn+2];
+   }
+
+   //Loop on the 3 color channels
+   for (int i = 0; i < 3; i++) {
+      // interpolate bi-cubically!
+      //Vertical
+      Col[0]  = CubicHermite(Kernel[0][0][i], Kernel[1][0][i], Kernel[2][0][i], Kernel[3][0][i], xfract);
+      Col[1]  = CubicHermite(Kernel[0][1][i], Kernel[1][1][i], Kernel[2][1][i], Kernel[3][1][i], xfract);
+      Col[2]  = CubicHermite(Kernel[0][2][i], Kernel[1][2][i], Kernel[2][2][i], Kernel[3][2][i], xfract);
+      Col[3]  = CubicHermite(Kernel[0][3][i], Kernel[1][3][i], Kernel[2][3][i], Kernel[3][3][i], xfract);
+      //Horizontal
+      Value = CubicHermite(Col[0], Col[1], Col[2], Col[3], yfract);
+
+      // Clamp the values since the curve can put the value below 0 or above 255
+      Value<0.0f ? Out[i]=0.0f : Value>255.0f ? Out[i]=255.0f : Out[i]=Value;
+   }
+   return Out;
+}
+//---------------------------------------------------------------------------
+
+//Used to resize tile graphs when loaded from Ressource, Entry point
+void TfTaipei::ResizeImage(Graphics::TBitmap *SrcImage, Graphics::TBitmap *DestImage, float Scale)
+{
+   DestImage->Width  = SrcImage->Width  * Scale;
+   DestImage->Height = SrcImage->Height * Scale;
+
+   SrcImage->HandleType   = bmDIB; // allows use of ScanLine
+   SrcImage->PixelFormat  = pf24bit;
+   DestImage->HandleType  = bmDIB; // allows use of ScanLine
+   DestImage->PixelFormat = pf24bit;
+
+   Byte SrcRowCache[4][TILESIZE_100*44*3];
+
+   Byte *DestRow;
+   Byte *OutValue;
+   float u, v; //Analog for x, y but from source image
+
+   Byte *SrcRow;
+   int yint, yLn;
+
+   //Loop on each horizontal line of the destination image
+   for (int y=0; y<DestImage->Height; y++) {
+      DestRow = (Byte *)DestImage->ScanLine[y];
+      v = float(y) / float(DestImage->Height - 1);
+
+      //Caching the 4 source rows to be used for the next dest row, to limit number of calls to ScanLine
+      yint = int((v * SrcImage->Height) - 0.5);
+      for (int i=0; i<4; i++) {
+         yLn = yint + (i-1);
+         yLn<0 ? yLn=0 : yLn>SrcImage->Height-1 ? yLn=SrcImage->Height-1 : yLn=yLn;
+         SrcRow = (Byte *)SrcImage->ScanLine[yLn];
+
+         for (int j=0; j<SrcImage->Width*3; j++) {
+            SrcRowCache[i][j] = SrcRow[j];
+         }
+      }
+
+      //Loop for each pixel on that destination line
+      for (int x=0; x<DestImage->Width; x++) {
+         u = float(x) / float(DestImage->Width - 1);
+
+         OutValue = (Byte *)SampleBicubic(SrcImage, u, v, SrcRowCache);
+
+         DestRow[x*3]     = OutValue[0];
+         DestRow[x*3 + 1] = OutValue[1];
+         DestRow[x*3 + 2] = OutValue[2];
+      }
+   }
+}
+//---------------------------------------------------------------------------
+
 //Inverts the RGB color values of a bitmap given in parameter
 void __fastcall TfTaipei::Invert(Graphics::TBitmap *pBitmap)
 {
-   Byte *pyx;
+   Byte *Row;
 
    pBitmap->HandleType = bmDIB; // allows use of ScanLine
    pBitmap->PixelFormat = pf24bit;
 
-   for(int y=0; y<pBitmap->Height-1; y++) {
-      pyx=(Byte *)pBitmap->ScanLine[y];
-      for(int x=0; x<pBitmap->Width-1; x++) {
-         pyx[x*3]     = (255 -pyx[x*3]);
-         pyx[x*3 + 1] = (255 -pyx[x*3 + 1]);
-         pyx[x*3 + 2] = (255 -pyx[x*3 + 2]);
+   for (int y=0; y<pBitmap->Height-1; y++) {
+      Row = (Byte *)pBitmap->ScanLine[y];
+      for (int x=0; x<pBitmap->Width-1; x++) {
+         Row[x*3]     = ~Row[x*3]    ; // (255 -Row[x*3]);
+         Row[x*3 + 1] = ~Row[x*3 + 1]; // (255 -Row[x*3 + 1]);
+         Row[x*3 + 2] = ~Row[x*3 + 2]; // (255 -Row[x*3 + 2]);
       }
    }
 }
@@ -969,7 +1257,7 @@ void TfTaipei::DrawTile(int pId, bool pSel, int pRealX, int pRealY, bool pNotch,
       this->Canvas->Brush->Color = clWhite;
       this->Canvas->Rectangle(pRealX, pRealY, pRealX + TILESIZE, pRealY + TILESIZE); //Top Face
 
-      this->mlTiles->GetBitmap(pId, TileGraph);
+      this->ilTiles->GetBitmap(pId, TileGraph);
 
       if(pSel)
          this->Invert(TileGraph);
@@ -1677,5 +1965,7 @@ void TfTaipei::AssignTypeGraph(TTile* pCandidateTileA, TTile* pCandidateTileB, i
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+
+
 
 

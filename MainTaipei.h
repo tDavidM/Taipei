@@ -20,6 +20,7 @@
 #include <System.ImageList.hpp>
 
 #define CONGRATSIZE 39
+#define TILESIZE_100       36  // Horizontal pixel width of a tile
 
 //---------------------------------------------------------------------------
 
@@ -421,8 +422,7 @@ public:
 class TfTaipei : public TForm
 {
 __published:
-
-   TImageList *mlTiles;            //Stores all tile's graph
+   TImageList *ilTiles;            //Stores all tile's graph while loaded to be resize
    TTimer *tAutoPlay;              //Timer to get a delay between AutoPlay moves
    TImage *iMainLogo;              //Main Taipei Logo image object
    TLabel *lMainTitle;             //Main Logo/title text in white transparent
@@ -496,10 +496,11 @@ __published:
    TMenuItem *mCustom;
    TMenuItem *mEditLayout;
    TMenuItem *mDebug;
-   TMenuItem *m_Zoom;
-   TMenuItem *m_150p;
-   TMenuItem *m_200p;
-   TMenuItem *m_100p;
+   TMenuItem *mZoom;
+   TMenuItem *m150p;
+   TMenuItem *m200p;
+   TMenuItem *m100p;
+   TMenuItem *m125p;
 
    void __fastcall mExitClick(TObject *Sender);        //Called to close the application
    void __fastcall FormCreate(TObject *Sender);        //Initialises form's default values and read command line call parameters
@@ -507,9 +508,10 @@ __published:
    void __fastcall mAboutClick(TObject *Sender);       //Shows a system MessageBox with infos about Taipei
    void __fastcall mHowtoPlayClick(TObject *Sender);   //Shows a system MessageBox with help to play the game
    void __fastcall mStrategyClick(TObject *Sender);    //Shows a system MessageBox with strategies to play the game
-   void __fastcall m_100pClick(TObject *Sender);       //Change zoom to 100%
-   void __fastcall m_150pClick(TObject *Sender);       //Change zoom to 150%
-   void __fastcall m_200pClick(TObject *Sender);       //Change zoom to 200%
+   void __fastcall m100pClick(TObject *Sender);        //Change zoom to 100%
+   void __fastcall m125pClick(TObject *Sender);        //Change zoom to 125%
+   void __fastcall m150pClick(TObject *Sender);        //Change zoom to 150%
+   void __fastcall m200pClick(TObject *Sender);        //Change zoom to 200%
    void __fastcall mColorClick(TObject *Sender);       //Toggles between color and black&white tile graphs
    void __fastcall mWatchBuildsClick(TObject *Sender); //Toggles tile heap build animation
    void __fastcall mDarkenClick(TObject *Sender);      //Lowers the tile's eges brightness
@@ -549,6 +551,7 @@ __published:
    void __fastcall FormMouseMoveEditor(TObject *Sender, TShiftState Shift, int X, int Y); //Senses cursor mouvements in the game editor area
    void __fastcall FormMouseDownEditor(TObject *Sender, TMouseButton Button, TShiftState Shift, int X, int Y); //Senses cursor clicks in the game editor area
 
+
 private:
    int Mode;              //Indicated tile layout selected, 0=debug, 1t o 8= hard code layout and 99=custom
    int GameNumber;        //Seed used to generate the game, 0 to 32766 ~ish
@@ -587,7 +590,12 @@ private:
    TTile* GetNextHintTile(TTile* pStartingTile,             //Get next available tile for hint
                           int pType = -1);
    void HideTileStep(TTile* pTile, bool pAutoPlay = false); //Called when a tile is selected, if valid, it will select a tile or match with a selected tile and test if game is done
+
+   float CubicHermite (float A, float B, float C, float D, float t);                          //Used to resize tile graphs when loaded from Ressource, Compute Dest value
+   Byte* SampleBicubic(Graphics::TBitmap *image, float u, float v, Byte pSrcRowCache[4][TILESIZE_100*44*3]);       //Used to resize tile graphs when loaded from Ressource, Scan source, Generate Dest pixel
+   void  ResizeImage(Graphics::TBitmap *srcImage, Graphics::TBitmap *destImage, float scale); //Used to resize tile graphs when loaded from Ressource, Entry point
    void __fastcall Invert(Graphics::TBitmap *pBitmap);      //Inverts the RGB color values of a bitmap given in parameter
+
    void DrawTile(int pId, bool pSel, int pRealX, int pRealY,
                  bool pNotch = false, int pDebug = 0);      //Draws a tile with a graphic according to the given parameters (Called by DrawAllTiles )
    void DrawAllTiles(void);                                 //Draws all visibles tiles on the game area as graphic or wireframe depending on requirements
