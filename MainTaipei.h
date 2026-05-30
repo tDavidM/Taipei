@@ -553,7 +553,7 @@ __published:
 
 
 private:
-   int Mode;              //Indicated tile layout selected, 0=debug, 1t o 8= hard code layout and 99=custom
+   int Mode;              //Indicated tile layout selected, 0=debug, 1 to 8=hardcoded layout and 99=custom
    int GameNumber;        //Seed used to generate the game, 0 to 32766 ~ish
                           //  the original had a stange "bug" replicated here, see mSelectClick
    int StepBack;          //Number of steps taken, used to back/cancel a move

@@ -46,6 +46,8 @@ TfTaipei *fTaipei;
 #define GAMEWIDTH      31  // Horizontal width of the game grid
 #define GAMEHEIGHT     17  // Vertical height of the game grid
 
+#define YEAR           "2026"
+
 //---------------------------------------------------------------------------
 
 //Constructor for a Tile
@@ -647,6 +649,7 @@ void TfTaipei::InitGame(int pGameNo)
    this->StepBack = 0;
    this->GamedDone = 0;
    this->HintLoopMain = NULL;
+   this->HintLoopSecond = NULL;
    this->SelectedTile = NULL;
    this->GameNumber = pGameNo;
    this->Caption = "Taipei Game  #" + IntToStr(pGameNo);
@@ -758,7 +761,7 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
    TTile* CurrentTile = this->TileList;
    TTile* SelectTile = NULL;
    int MinHint   = 72;
-   int FloorHint = 0;
+   int FloorHint = -1;
    int MaxLoop   = 72;
 
    if (this->SelectedTile != NULL) {
@@ -782,7 +785,7 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
 
       //Select the matching tile with lowest Hint value if possible
       CurrentTile = this->TileList;
-      while(CurrentTile != NULL) {
+	  while(CurrentTile != NULL && SelectTile == NULL) {
          if (CurrentTile->Visible && CurrentTile->Hint == MinHint &&
               CurrentTile->Id != this->SelectedTile->Id && this->IsTileFree(CurrentTile)) {
             SelectTile = CurrentTile;
@@ -793,9 +796,9 @@ void __fastcall TfTaipei::tAutoPlayTimer(TObject *Sender)
 
       //Select the other tile available of the same type if possible
       if (SelectTile == NULL) {
-         CurrentTile = this->TileList;
-         while(CurrentTile != NULL) {
-            if (CurrentTile->Visible && CurrentTile->Hint != MinHint &&
+		 CurrentTile = this->TileList;
+		 while(CurrentTile != NULL && SelectTile == NULL) {
+			if (CurrentTile->Visible && CurrentTile->Hint != MinHint &&
                  CurrentTile->Type == this->SelectedTile->Type && this->IsTileFree(CurrentTile)) {
                SelectTile = CurrentTile;
                SelectTile->Selected = true;
