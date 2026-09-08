@@ -3,7 +3,7 @@ This clone was made without any access to the original source code and is writte
 Check Compare.png for a preview.
 Remakes of Taipei were reintroduced with Windows 7 and 10 respectively as Mahjong Titans and Microsoft Mahjong.
 
-
+![alt text](https://github.com/tDavidM/Taipei/blob/master/Compare.png "Comparison of the original game and the clone")
 
 This clone reproduces all functionalities from the version 4.0 (the one I knew as a kid) with a very high degree of fidelity, though some minor menu reorganisations and unavoidable minute visual differences exists.
 
